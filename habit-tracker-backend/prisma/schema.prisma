@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -12,4 +9,39 @@ generator client {
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  nombre        String
+  correo        String     @unique
+  contrasena    String
+  fechaRegistro DateTime   @default(now())
+  habitos       Habito[]
+  registros     Registro[]
+}
+
+model Habito {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  nombre      String
+  descripcion String?
+  categoria   String?
+  frecuencia  String
+  prioridad   Int?
+  fechaInicio DateTime
+  fechaFin    DateTime?
+  activo      Boolean    @default(true)
+  usuarioId   String     @db.ObjectId
+  usuario     Usuario    @relation(fields: [usuarioId], references: [id])
+  registros   Registro[]
+}
+
+model Registro {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  habitoId   String   @db.ObjectId
+  habito     Habito   @relation(fields: [habitoId], references: [id])
+  usuarioId  String   @db.ObjectId
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  fecha      DateTime
+  completado Boolean  @default(false)
 }
