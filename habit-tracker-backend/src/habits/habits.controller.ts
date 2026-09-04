@@ -54,6 +54,16 @@ export class HabitsController {
     return this.habitsService.toggleActivo(req.user.userId, id);
   }
 
+  @Post(':id/completar')
+  completar(@Request() req: RequestConUsuario, @Param('id') id: string) {
+    return this.habitsService.completar(req.user.userId, id);
+  }
+
+  @Get(':id/registros')
+  historial(@Request() req: RequestConUsuario, @Param('id') id: string) {
+    return this.habitsService.historial(req.user.userId, id);
+  }
+
   @Delete(':id')
   remove(@Request() req: RequestConUsuario, @Param('id') id: string) {
     return this.habitsService.remove(req.user.userId, id);

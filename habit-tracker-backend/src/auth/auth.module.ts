@@ -20,8 +20,6 @@ import { JwtStrategy } from './jwt.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  // Exportamos esto para que cualquier otro módulo (Habits, Users, etc.)
-  // pueda usar JwtAuthGuard sin volver a registrar Passport/Jwt.
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}
