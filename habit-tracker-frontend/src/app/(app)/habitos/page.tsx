@@ -34,6 +34,7 @@ export default function HabitosPage() {
   const [habitoEditando, setHabitoEditando] = useState<Habito | null>(null);
   const [habitoAEliminar, setHabitoAEliminar] = useState<Habito | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [completadosHoy, setCompletadosHoy] = useState<Set<string>>(new Set());
 
   async function cargarHabitos() {
     try {
@@ -99,6 +100,7 @@ export default function HabitosPage() {
   async function completarHoy(h: Habito) {
     try {
       await habitsApi.completar(h.id);
+      setCompletadosHoy((prev) => new Set(prev).add(h.id));
       setSnackbar(`"${h.nombre}" marcado como completado hoy`);
     } catch (err) {
       setSnackbar(
@@ -117,7 +119,7 @@ export default function HabitosPage() {
           mb: 3,
         }}
       >
-        <Typography variant="h5" sx={{ fontWeight: 500 }}>
+        <Typography variant="h5" fontWeight={500}>
           Mis hábitos
         </Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={abrirCrear}>
@@ -146,9 +148,18 @@ export default function HabitosPage() {
       )}
 
       <Grid container spacing={2}>
-        {habitos?.map((h) => (
+        {habitos?.map((h) => {
+          const completadoHoy = completadosHoy.has(h.id);
+          return (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={h.id}>
-            <Card variant="outlined">
+            <Card
+              variant="outlined"
+              sx={
+                completadoHoy
+                  ? { borderColor: 'success.main', borderWidth: 2, bgcolor: 'rgba(22, 163, 74, 0.04)' }
+                  : undefined
+              }
+            >
               <CardContent>
                 <Box
                   sx={{
@@ -157,7 +168,7 @@ export default function HabitosPage() {
                     alignItems: 'flex-start',
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                  <Typography variant="h6" fontWeight={500}>
                     {h.nombre}
                   </Typography>
                   <Switch
@@ -179,16 +190,25 @@ export default function HabitosPage() {
                   {!h.activo && (
                     <Chip label="Inactivo" size="small" color="default" />
                   )}
+                  {completadoHoy && (
+                    <Chip
+                      icon={<CheckCircleIcon />}
+                      label="Completado hoy"
+                      size="small"
+                      color="success"
+                    />
+                  )}
                 </Box>
               </CardContent>
               <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
                 <Button
                   size="small"
+                  color={completadoHoy ? 'success' : 'primary'}
                   startIcon={<CheckCircleIcon />}
                   onClick={() => completarHoy(h)}
-                  disabled={!h.activo}
+                  disabled={!h.activo || completadoHoy}
                 >
-                  Completar hoy
+                  {completadoHoy ? 'Completado' : 'Completar hoy'}
                 </Button>
                 <Box>
                   <IconButton size="small" onClick={() => abrirEditar(h)}>
@@ -201,7 +221,8 @@ export default function HabitosPage() {
               </CardActions>
             </Card>
           </Grid>
-        ))}
+          );
+        })}
       </Grid>
 
       <HabitoFormDialog
@@ -211,7 +232,6 @@ export default function HabitosPage() {
         onGuardar={guardarHabito}
       />
 
-      {/* Confirmación antes de eliminar (acción crítica) */}
       <Dialog open={!!habitoAEliminar} onClose={() => setHabitoAEliminar(null)}>
         <DialogTitle>¿Eliminar hábito?</DialogTitle>
         <DialogContent>
