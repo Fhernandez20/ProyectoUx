@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight={500} sx={{ mb: 1 }}>
+      <Typography variant="h5" sx={{ mb: 1 }} style={{ fontWeight: 500 }}>
         Hola, {usuario?.nombre}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -64,13 +64,13 @@ export default function DashboardPage() {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {tarjetas.map((t) => (
-          <Grid item xs={12} sm={4} key={t.label}>
+          <Grid size={{ xs: 12, sm: 4 }} key={t.label}>
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="body2" color="text.secondary">
                   {t.label}
                 </Typography>
-                <Typography variant="h3" fontWeight={500}>
+                <Typography variant="h3" style={{ fontWeight: 500 }}>
                   {t.valor}
                 </Typography>
               </CardContent>

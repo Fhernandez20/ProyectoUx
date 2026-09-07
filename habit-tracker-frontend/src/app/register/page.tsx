@@ -59,7 +59,7 @@ export default function RegisterPage() {
       }}
     >
       <Paper sx={{ p: 4, width: '100%', maxWidth: 400 }} elevation={2}>
-        <Typography variant="h5" fontWeight={500} gutterBottom>
+        <Typography variant="h5" gutterBottom sx={{ fontWeight: 500 }}>
           Crear cuenta
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

@@ -52,7 +52,7 @@ export default function LoginPage() {
       }}
     >
       <Paper sx={{ p: 4, width: '100%', maxWidth: 400 }} elevation={2}>
-        <Typography variant="h5" fontWeight={500} gutterBottom>
+        <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 500 }}>
           Iniciar sesión
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

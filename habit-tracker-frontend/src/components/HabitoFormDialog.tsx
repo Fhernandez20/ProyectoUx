@@ -138,7 +138,7 @@ export default function HabitoFormDialog({
             margin="normal"
             value={prioridad}
             onChange={(e) => setPrioridad(Number(e.target.value))}
-            inputProps={{ min: 1 }}
+            slotProps={{ htmlInput: { min: 1 } }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

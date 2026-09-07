@@ -21,7 +21,7 @@ export default function Navbar() {
       sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
     >
       <Toolbar>
-        <Typography variant="h6" fontWeight={500} sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 500 }}>
           Habit Tracker
         </Typography>
         {usuario && (

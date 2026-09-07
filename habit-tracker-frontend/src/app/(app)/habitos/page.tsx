@@ -22,8 +22,8 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
-import DeleteIcon from '@mui/icons-material/DeleteOutline';
-import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircleOutlined';
 import { habitsApi, Habito, HabitoInput, ApiError } from '@/lib/api';
 import HabitoFormDialog from '@/components/HabitoFormDialog';
 
@@ -117,7 +117,7 @@ export default function HabitosPage() {
           mb: 3,
         }}
       >
-        <Typography variant="h5" fontWeight={500}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }}>
           Mis hábitos
         </Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={abrirCrear}>
@@ -147,7 +147,7 @@ export default function HabitosPage() {
 
       <Grid container spacing={2}>
         {habitos?.map((h) => (
-          <Grid item xs={12} sm={6} md={4} key={h.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={h.id}>
             <Card variant="outlined">
               <CardContent>
                 <Box
@@ -157,7 +157,7 @@ export default function HabitosPage() {
                     alignItems: 'flex-start',
                   }}
                 >
-                  <Typography variant="h6" fontWeight={500}>
+                  <Typography variant="h6" sx={{ fontWeight: 500 }}>
                     {h.nombre}
                   </Typography>
                   <Switch
