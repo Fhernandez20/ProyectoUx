@@ -48,7 +48,6 @@ export class HabitsService {
   }
 
   async update(usuarioId: string, id: string, dto: UpdateHabitoDto) {
-    // findOne ya valida existencia y propiedad del hábito
     await this.findOne(usuarioId, id);
 
     return this.prisma.habito.update({
@@ -63,10 +62,10 @@ export class HabitsService {
 
   async remove(usuarioId: string, id: string) {
     await this.findOne(usuarioId, id);
+    await this.prisma.registro.deleteMany({ where: { habitoId: id } });
     return this.prisma.habito.delete({ where: { id } });
   }
 
-  // Atajo para "Activar o desactivar hábitos" (requisito del syllabus)
   async toggleActivo(usuarioId: string, id: string) {
     const habito = await this.findOne(usuarioId, id);
     return this.prisma.habito.update({
@@ -75,9 +74,7 @@ export class HabitsService {
     });
   }
 
-  // Marca el hábito como completado el día de hoy (crea un Registro)
   async completar(usuarioId: string, habitoId: string) {
-    // findOne valida que el hábito exista y sea del usuario
     await this.findOne(usuarioId, habitoId);
 
     return this.prisma.registro.create({
@@ -90,7 +87,6 @@ export class HabitsService {
     });
   }
 
-  // Historial de registros de un hábito (para "Visualizar historial")
   async historial(usuarioId: string, habitoId: string) {
     await this.findOne(usuarioId, habitoId);
 
