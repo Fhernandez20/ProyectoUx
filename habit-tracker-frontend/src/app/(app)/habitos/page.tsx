@@ -119,7 +119,7 @@ export default function HabitosPage() {
           mb: 3,
         }}
       >
-        <Typography variant="h5" fontWeight={500}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }}>
           Mis hábitos
         </Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={abrirCrear}>
@@ -168,7 +168,7 @@ export default function HabitosPage() {
                     alignItems: 'flex-start',
                   }}
                 >
-                  <Typography variant="h6" fontWeight={500}>
+                  <Typography variant="h6" style={{ fontWeight: 500 }}>
                     {h.nombre}
                   </Typography>
                   <Switch
