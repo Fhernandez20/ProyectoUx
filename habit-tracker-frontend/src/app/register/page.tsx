@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import { registerSchema, primerError } from '@/lib/schemas';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -29,8 +30,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    if (contrasena.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    const errorValidacion = primerError(registerSchema, {
+      nombre,
+      correo,
+      contrasena,
+    });
+    if (errorValidacion) {
+      setError(errorValidacion);
       return;
     }
 
@@ -59,7 +65,7 @@ export default function RegisterPage() {
       }}
     >
       <Paper sx={{ p: 4, width: '100%', maxWidth: 400 }} elevation={2}>
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 500 }}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }} gutterBottom>
           Crear cuenta
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

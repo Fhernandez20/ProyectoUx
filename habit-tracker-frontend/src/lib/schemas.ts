@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+
+z.config(z.locales.es());
+
 export const loginSchema = z.object({
   correo: z
     .string()
