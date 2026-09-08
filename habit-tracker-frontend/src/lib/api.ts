@@ -36,12 +36,10 @@ async function request<T>(
         ? data.message.join(', ')
         : data.message ?? message;
     } catch {
-      // el backend no devolvió JSON, usamos el mensaje genérico
     }
     throw new ApiError(message, res.status);
   }
 
-  // 204 No Content (por ejemplo, en un delete)
   if (res.status === 204) return undefined as T;
 
   return res.json();

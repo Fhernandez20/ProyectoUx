@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import { loginSchema, primerError } from '@/lib/schemas';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -27,6 +28,13 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const errorValidacion = primerError(loginSchema, { correo, contrasena });
+    if (errorValidacion) {
+      setError(errorValidacion);
+      return;
+    }
+
     setCargando(true);
     try {
       await login(correo, contrasena);
@@ -52,7 +60,7 @@ export default function LoginPage() {
       }}
     >
       <Paper sx={{ p: 4, width: '100%', maxWidth: 400 }} elevation={2}>
-        <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 500 }}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }} gutterBottom>
           Iniciar sesión
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

@@ -14,6 +14,7 @@ import {
   Box,
 } from '@mui/material';
 import { Habito, HabitoInput, ApiError } from '@/lib/api';
+import { habitoSchema, primerError } from '@/lib/schemas';
 
 interface Props {
   open: boolean;
@@ -56,20 +57,25 @@ export default function HabitoFormDialog({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!nombre.trim()) {
-      setError('El nombre es obligatorio');
+
+    const datos = {
+      nombre,
+      descripcion: descripcion || undefined,
+      categoria: categoria || undefined,
+      frecuencia,
+      prioridad,
+    };
+
+    const errorValidacion = primerError(habitoSchema, datos);
+    if (errorValidacion) {
+      setError(errorValidacion);
       return;
     }
+
     setError(null);
     setGuardando(true);
     try {
-      await onGuardar({
-        nombre,
-        descripcion: descripcion || undefined,
-        categoria: categoria || undefined,
-        frecuencia,
-        prioridad,
-      });
+      await onGuardar(datos);
       onClose();
     } catch (err) {
       setError(

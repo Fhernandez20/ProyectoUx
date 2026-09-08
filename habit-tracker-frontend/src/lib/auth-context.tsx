@@ -27,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
 
-  // Al cargar la app, si hay token guardado, valida sesión con /auth/me
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {

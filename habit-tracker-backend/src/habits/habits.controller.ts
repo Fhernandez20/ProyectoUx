@@ -15,7 +15,6 @@ import { HabitsService } from './habits.service';
 import { CreateHabitoDto } from './dto/create-habito.dto';
 import { UpdateHabitoDto } from './dto/update-habito.dto';
 
-// El payload del JWT (ver jwt.strategy.ts) trae { userId, correo, nombre }
 interface RequestConUsuario extends ExpressRequest {
   user: { userId: string; correo: string; nombre: string };
 }

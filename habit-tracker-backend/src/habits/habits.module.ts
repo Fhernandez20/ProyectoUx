@@ -4,7 +4,7 @@ import { HabitsController } from './habits.controller';
 import { HabitsService } from './habits.service';
 
 @Module({
-  imports: [AuthModule], // trae PassportModule/JwtModule ya registrados, para que JwtAuthGuard funcione
+  imports: [AuthModule], 
   controllers: [HabitsController],
   providers: [HabitsService],
 })
