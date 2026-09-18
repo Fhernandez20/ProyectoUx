@@ -34,6 +34,12 @@ export class HabitsController {
     return this.habitsService.findAll(req.user.userId);
   }
 
+  // Debe ir ANTES de @Get(':id'), si no Nest interpretaría "completados-hoy" como un id
+  @Get('completados-hoy')
+  completadosHoy(@Request() req: RequestConUsuario) {
+    return this.habitsService.completadosHoy(req.user.userId);
+  }
+
   @Get(':id')
   findOne(@Request() req: RequestConUsuario, @Param('id') id: string) {
     return this.habitsService.findOne(req.user.userId, id);

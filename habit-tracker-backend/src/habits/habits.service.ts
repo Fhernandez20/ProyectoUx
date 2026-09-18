@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -74,8 +75,43 @@ export class HabitsService {
     });
   }
 
+  // Rango [00:00 de hoy, 00:00 de mañana) según la hora del servidor
+  private rangoDeHoy() {
+    const inicio = new Date();
+    inicio.setHours(0, 0, 0, 0);
+    const fin = new Date(inicio);
+    fin.setDate(fin.getDate() + 1);
+    return { inicio, fin };
+  }
+
+  async completadosHoy(usuarioId: string) {
+    const { inicio, fin } = this.rangoDeHoy();
+    const registros = await this.prisma.registro.findMany({
+      where: {
+        usuarioId,
+        completado: true,
+        fecha: { gte: inicio, lt: fin },
+      },
+      select: { habitoId: true },
+    });
+    return registros.map((r) => r.habitoId);
+  }
+
   async completar(usuarioId: string, habitoId: string) {
     await this.findOne(usuarioId, habitoId);
+
+    const { inicio, fin } = this.rangoDeHoy();
+    const yaCompletado = await this.prisma.registro.findFirst({
+      where: {
+        habitoId,
+        usuarioId,
+        completado: true,
+        fecha: { gte: inicio, lt: fin },
+      },
+    });
+    if (yaCompletado) {
+      throw new ConflictException('Ya completaste este hábito hoy');
+    }
 
     return this.prisma.registro.create({
       data: {

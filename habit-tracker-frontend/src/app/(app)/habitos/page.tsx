@@ -38,8 +38,12 @@ export default function HabitosPage() {
 
   async function cargarHabitos() {
     try {
-      const data = await habitsApi.listar();
+      const [data, idsCompletados] = await Promise.all([
+        habitsApi.listar(),
+        habitsApi.completadosHoy(),
+      ]);
       setHabitos(data);
+      setCompletadosHoy(new Set(idsCompletados));
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'No se pudieron cargar los hábitos',
@@ -103,6 +107,10 @@ export default function HabitosPage() {
       setCompletadosHoy((prev) => new Set(prev).add(h.id));
       setSnackbar(`"${h.nombre}" marcado como completado hoy`);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Ya estaba completado hoy (ej. desde otra pestaña): solo sincronizamos la vista
+        setCompletadosHoy((prev) => new Set(prev).add(h.id));
+      }
       setSnackbar(
         err instanceof ApiError ? err.message : 'No se pudo completar',
       );
