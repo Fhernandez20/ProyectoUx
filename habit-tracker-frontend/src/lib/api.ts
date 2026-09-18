@@ -124,3 +124,49 @@ export const habitsApi = {
   // IDs de los hábitos que el usuario ya completó hoy
   completadosHoy: () => request<string[]>('/habits/completados-hoy'),
 };
+
+// ----- Statistics -----
+export interface ResumenStats {
+  totalHabitos: number;
+  habitosActivos: number;
+  habitosFinalizados: number;
+  completadosHoy: number;
+  esperadosHoy: number;
+  rachaActual: number;
+  mejorRacha: number;
+  cumplimiento: { hoy: number; semana: number; mes: number };
+}
+
+export interface ActividadDia {
+  fecha: string; // "2026-09-18"
+  completados: number;
+  esperados: number;
+  porcentaje: number;
+}
+
+export interface SemanaTendencia {
+  desde: string;
+  hasta: string;
+  porcentaje: number;
+}
+
+export interface HabitoStats {
+  id: string;
+  nombre: string;
+  frecuencia: string;
+  activo: boolean;
+  completadoHoy: boolean;
+  completadosSemana: number;
+  completadosMes: number;
+  rachaActual: number;
+  mejorRacha: number;
+}
+
+export const statsApi = {
+  resumen: () => request<ResumenStats>('/statistics/resumen'),
+  actividad: (dias: number) =>
+    request<ActividadDia[]>(`/statistics/actividad?dias=${dias}`),
+  tendencia: (semanas: number) =>
+    request<SemanaTendencia[]>(`/statistics/tendencia?semanas=${semanas}`),
+  porHabito: () => request<HabitoStats[]>('/statistics/habitos'),
+};
