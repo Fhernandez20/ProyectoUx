@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (!token) {
       setCargando(false);
       return;
@@ -38,25 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .me()
       .then((data) => setUsuario(data))
       .catch(() => {
-        localStorage.removeItem('access_token');
+        sessionStorage.removeItem('access_token');
       })
       .finally(() => setCargando(false));
   }, []);
 
   async function login(correo: string, contrasena: string) {
     const data = await authApi.login({ correo, contrasena });
-    localStorage.setItem('access_token', data.access_token);
+    sessionStorage.setItem('access_token', data.access_token);
     setUsuario(data.usuario);
   }
 
   async function register(nombre: string, correo: string, contrasena: string) {
     const data = await authApi.register({ nombre, correo, contrasena });
-    localStorage.setItem('access_token', data.access_token);
+    sessionStorage.setItem('access_token', data.access_token);
     setUsuario(data.usuario);
   }
 
   function logout() {
-    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('access_token');
     setUsuario(null);
   }
 
