@@ -1,0 +1,109 @@
+import {
+  HabitoBase,
+  aplicaEnDia,
+  calcularRachas,
+  claveDia,
+  evaluarDia,
+  porcentaje,
+} from './statistics.utils';
+
+const d = (y: number, m: number, dia: number) => new Date(y, m - 1, dia);
+const dias = (...claves: string[]) => new Set(claves);
+
+function habito(parcial: Partial<HabitoBase> = {}): HabitoBase {
+  return {
+    id: 'h1',
+    nombre: 'Leer',
+    activo: true,
+    frecuencia: 'diario',
+    fechaInicio: d(2026, 9, 1),
+    fechaFin: null,
+    ...parcial,
+  };
+}
+
+describe('claveDia', () => {
+  it('formatea con ceros a la izquierda', () => {
+    expect(claveDia(d(2026, 3, 5))).toBe('2026-03-05');
+  });
+});
+
+describe('calcularRachas', () => {
+  const hoy = d(2026, 9, 18);
+
+  it('sin actividad: rachas en 0', () => {
+    expect(calcularRachas(new Set(), hoy)).toEqual({ actual: 0, mejor: 0 });
+  });
+
+  it('racha actual cuenta hacia atrás desde hoy', () => {
+    const r = calcularRachas(dias('2026-09-16', '2026-09-17', '2026-09-18'), hoy);
+    expect(r).toEqual({ actual: 3, mejor: 3 });
+  });
+
+  it('si hoy aún no hay actividad, la racha sigue desde ayer', () => {
+    const r = calcularRachas(dias('2026-09-16', '2026-09-17'), hoy);
+    expect(r.actual).toBe(2);
+  });
+
+  it('si ayer tampoco hubo actividad, la racha actual es 0', () => {
+    const r = calcularRachas(dias('2026-09-10', '2026-09-11'), hoy);
+    expect(r).toEqual({ actual: 0, mejor: 2 });
+  });
+
+  it('la mejor racha puede ser anterior a la actual', () => {
+    const r = calcularRachas(
+      dias('2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-17', '2026-09-18'),
+      hoy,
+    );
+    expect(r).toEqual({ actual: 2, mejor: 4 });
+  });
+
+  it('funciona al cruzar de mes', () => {
+    const r = calcularRachas(dias('2026-08-30', '2026-08-31', '2026-09-01'), d(2026, 9, 1));
+    expect(r).toEqual({ actual: 3, mejor: 3 });
+  });
+});
+
+describe('aplicaEnDia', () => {
+  it('no aplica antes de la fecha de inicio', () => {
+    expect(aplicaEnDia(habito(), d(2026, 8, 31))).toBe(false);
+    expect(aplicaEnDia(habito(), d(2026, 9, 1))).toBe(true);
+  });
+
+  it('no aplica después de la fecha de fin', () => {
+    const h = habito({ fechaFin: d(2026, 9, 10) });
+    expect(aplicaEnDia(h, d(2026, 9, 10))).toBe(true);
+    expect(aplicaEnDia(h, d(2026, 9, 11))).toBe(false);
+  });
+
+  it('no aplica si el hábito está inactivo', () => {
+    expect(aplicaEnDia(habito({ activo: false }), d(2026, 9, 18))).toBe(false);
+  });
+});
+
+describe('evaluarDia y porcentaje', () => {
+  const dia = d(2026, 9, 18);
+
+  it('2 hábitos diarios, 1 completado = 50%', () => {
+    const habitos = [habito({ id: 'a' }), habito({ id: 'b' })];
+    const r = evaluarDia(habitos, new Set(['a']), dia);
+    expect(r).toEqual({ completados: 1, esperados: 2 });
+    expect(porcentaje(r.completados, r.esperados)).toBe(50);
+  });
+
+  it('ignora completados de hábitos que no aplican ese día', () => {
+    const habitos = [habito({ id: 'a', activo: false }), habito({ id: 'b' })];
+    const r = evaluarDia(habitos, new Set(['a', 'b']), dia);
+    expect(r).toEqual({ completados: 1, esperados: 1 });
+  });
+
+  it('un hábito semanal pesa 1/7 por día', () => {
+    const r = evaluarDia([habito({ frecuencia: 'semanal' })], undefined, dia);
+    expect(r.esperados).toBeCloseTo(1 / 7);
+  });
+
+  it('porcentaje nunca pasa de 100 y con 0 esperados devuelve 0', () => {
+    expect(porcentaje(5, 2)).toBe(100);
+    expect(porcentaje(0, 0)).toBe(0);
+  });
+});
