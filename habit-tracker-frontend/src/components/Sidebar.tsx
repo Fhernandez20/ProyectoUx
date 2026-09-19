@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
 import ChecklistIcon from '@mui/icons-material/ChecklistOutlined';
+import BarChartIcon from '@mui/icons-material/BarChartOutlined';
 import { usePathname, useRouter } from 'next/navigation';
 
 const DRAWER_WIDTH = 220;
@@ -17,6 +18,7 @@ const DRAWER_WIDTH = 220;
 const items = [
   { label: 'Dashboard', href: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Mis hábitos', href: '/habitos', icon: <ChecklistIcon /> },
+  { label: 'Estadísticas', href: '/estadisticas', icon: <BarChartIcon /> },
 ];
 
 export default function Sidebar() {

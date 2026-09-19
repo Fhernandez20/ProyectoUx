@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Alert,
   LinearProgress,
+  Divider,
   useTheme,
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -176,6 +177,30 @@ export default function DashboardPage() {
                     label="Últimos 30 días"
                     valor={resumen.cumplimiento.mes}
                   />
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Total de hábitos
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {resumen.totalHabitos}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Hábitos finalizados
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {resumen.habitosFinalizados}
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => router.push('/estadisticas')}
+                  >
+                    Ver estadísticas completas
+                  </Button>
                 </CardContent>
               </Card>
             </Grid>
