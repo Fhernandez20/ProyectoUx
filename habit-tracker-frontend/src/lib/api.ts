@@ -86,6 +86,8 @@ export interface HabitoInput {
   categoria?: string;
   frecuencia: 'diario' | 'semanal' | 'personalizada';
   prioridad?: number;
+  fechaInicio?: string; // "YYYY-MM-DDT12:00:00.000Z"
+  fechaFin?: string | null; // null = quitar la fecha de fin
 }
 
 // ----- Auth -----

@@ -32,9 +32,10 @@ export class CreateHabitoDto {
   @IsDateString()
   fechaInicio?: string;
 
+  // null = sin fecha de fin (permite quitarla al editar). @IsOptional() acepta null.
   @IsOptional()
   @IsDateString()
-  fechaFin?: string;
+  fechaFin?: string | null;
 
   @IsOptional()
   @IsBoolean()

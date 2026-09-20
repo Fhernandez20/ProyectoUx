@@ -19,6 +19,8 @@ import {
   DialogContent,
   DialogActions,
   Grid,
+  TextField,
+  MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
@@ -26,6 +28,17 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircleOutlined';
 import { habitsApi, Habito, HabitoInput, ApiError } from '@/lib/api';
 import HabitoFormDialog from '@/components/HabitoFormDialog';
+import { formatoFechaCorta } from '@/lib/fechas';
+import {
+  Filtros,
+  FILTROS_INICIALES,
+  aplicarFiltros,
+  aunNoInicia,
+  categoriasDisponibles,
+  esVigenteHoy,
+  estaFinalizado,
+  hayFiltrosActivos,
+} from '@/lib/habitos-filtros';
 
 export default function HabitosPage() {
   const [habitos, setHabitos] = useState<Habito[] | null>(null);
@@ -35,6 +48,7 @@ export default function HabitosPage() {
   const [habitoAEliminar, setHabitoAEliminar] = useState<Habito | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [completadosHoy, setCompletadosHoy] = useState<Set<string>>(new Set());
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
 
   async function cargarHabitos() {
     try {
@@ -117,6 +131,9 @@ export default function HabitosPage() {
     }
   }
 
+  const visibles = habitos ? aplicarFiltros(habitos, filtros) : [];
+  const categorias = habitos ? categoriasDisponibles(habitos) : [];
+
   return (
     <Box>
       <Box
@@ -155,9 +172,120 @@ export default function HabitosPage() {
         </Card>
       )}
 
+      {habitos && habitos.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField
+                label="Buscar"
+                size="small"
+                fullWidth
+                value={filtros.busqueda}
+                onChange={(e) =>
+                  setFiltros({ ...filtros, busqueda: e.target.value })
+                }
+                placeholder="Nombre o descripción"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 2.5 }}>
+              <TextField
+                select
+                label="Estado"
+                size="small"
+                fullWidth
+                value={filtros.estado}
+                onChange={(e) =>
+                  setFiltros({
+                    ...filtros,
+                    estado: e.target.value as Filtros['estado'],
+                  })
+                }
+              >
+                <MenuItem value="todos">Todos</MenuItem>
+                <MenuItem value="activos">Activos</MenuItem>
+                <MenuItem value="inactivos">Inactivos</MenuItem>
+                <MenuItem value="finalizados">Finalizados</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 2.5 }}>
+              <TextField
+                select
+                label="Categoría"
+                size="small"
+                fullWidth
+                value={filtros.categoria}
+                onChange={(e) =>
+                  setFiltros({ ...filtros, categoria: e.target.value })
+                }
+              >
+                <MenuItem value="todas">Todas</MenuItem>
+                {categorias.map((c) => (
+                  <MenuItem key={c} value={c}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+              <TextField
+                select
+                label="Ordenar por"
+                size="small"
+                fullWidth
+                value={filtros.orden}
+                onChange={(e) =>
+                  setFiltros({
+                    ...filtros,
+                    orden: e.target.value as Filtros['orden'],
+                  })
+                }
+              >
+                <MenuItem value="prioridad">Prioridad</MenuItem>
+                <MenuItem value="nombre">Nombre (A-Z)</MenuItem>
+                <MenuItem value="inicio">Fecha de inicio (recientes)</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mt: 1,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" aria-live="polite">
+              Mostrando {visibles.length} de {habitos.length}{' '}
+              {habitos.length === 1 ? 'hábito' : 'hábitos'}
+            </Typography>
+            {hayFiltrosActivos(filtros) && (
+              <Button
+                size="small"
+                onClick={() => setFiltros(FILTROS_INICIALES)}
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      {habitos && habitos.length > 0 && visibles.length === 0 && (
+        <Card variant="outlined" sx={{ textAlign: 'center', py: 5 }}>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Ningún hábito coincide con los filtros.
+          </Typography>
+          <Button variant="outlined" onClick={() => setFiltros(FILTROS_INICIALES)}>
+            Limpiar filtros
+          </Button>
+        </Card>
+      )}
+
       <Grid container spacing={2}>
-        {habitos?.map((h) => {
+        {visibles.map((h) => {
           const completadoHoy = completadosHoy.has(h.id);
+          const finalizado = estaFinalizado(h);
+          const porIniciar = aunNoInicia(h);
           return (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={h.id}>
             <Card
@@ -183,6 +311,11 @@ export default function HabitosPage() {
                     checked={h.activo}
                     onChange={() => toggleActivo(h)}
                     size="small"
+                    slotProps={{
+                      input: {
+                        'aria-label': `Activar o desactivar ${h.nombre}`,
+                      },
+                    }}
                   />
                 </Box>
                 {h.descripcion && (
@@ -190,6 +323,10 @@ export default function HabitosPage() {
                     {h.descripcion}
                   </Typography>
                 )}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Desde {formatoFechaCorta(h.fechaInicio)}
+                  {h.fechaFin ? ` · hasta ${formatoFechaCorta(h.fechaFin)}` : ''}
+                </Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                   <Chip label={h.frecuencia} size="small" />
                   {h.categoria && (
@@ -197,6 +334,16 @@ export default function HabitosPage() {
                   )}
                   {!h.activo && (
                     <Chip label="Inactivo" size="small" color="default" />
+                  )}
+                  {finalizado && (
+                    <Chip label="Finalizado" size="small" color="warning" />
+                  )}
+                  {porIniciar && (
+                    <Chip
+                      label={`Inicia el ${formatoFechaCorta(h.fechaInicio)}`}
+                      size="small"
+                      variant="outlined"
+                    />
                   )}
                   {completadoHoy && (
                     <Chip
@@ -214,15 +361,23 @@ export default function HabitosPage() {
                   color={completadoHoy ? 'success' : 'primary'}
                   startIcon={<CheckCircleIcon />}
                   onClick={() => completarHoy(h)}
-                  disabled={!h.activo || completadoHoy}
+                  disabled={!esVigenteHoy(h) || completadoHoy}
                 >
                   {completadoHoy ? 'Completado' : 'Completar hoy'}
                 </Button>
                 <Box>
-                  <IconButton size="small" onClick={() => abrirEditar(h)}>
+                  <IconButton
+                    size="small"
+                    aria-label={`Editar ${h.nombre}`}
+                    onClick={() => abrirEditar(h)}
+                  >
                     <EditIcon fontSize="small" />
                   </IconButton>
-                  <IconButton size="small" onClick={() => setHabitoAEliminar(h)}>
+                  <IconButton
+                    size="small"
+                    aria-label={`Eliminar ${h.nombre}`}
+                    onClick={() => setHabitoAEliminar(h)}
+                  >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Box>

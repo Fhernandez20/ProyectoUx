@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Habito, HabitoInput, ApiError } from '@/lib/api';
 import { habitoSchema, primerError } from '@/lib/schemas';
+import { aFechaApi, fechaLocal, hoyLocal } from '@/lib/fechas';
 
 interface Props {
   open: boolean;
@@ -41,6 +42,8 @@ export default function HabitoFormDialog({
   const [frecuencia, setFrecuencia] =
     useState<HabitoInput['frecuencia']>('diario');
   const [prioridad, setPrioridad] = useState(1);
+  const [fechaInicio, setFechaInicio] = useState(hoyLocal());
+  const [fechaFin, setFechaFin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -51,6 +54,8 @@ export default function HabitoFormDialog({
       setCategoria(habito?.categoria ?? '');
       setFrecuencia(habito?.frecuencia ?? 'diario');
       setPrioridad(habito?.prioridad ?? 1);
+      setFechaInicio(habito ? fechaLocal(habito.fechaInicio) : hoyLocal());
+      setFechaFin(habito?.fechaFin ? fechaLocal(habito.fechaFin) : '');
       setError(null);
     }
   }, [open, habito]);
@@ -58,19 +63,33 @@ export default function HabitoFormDialog({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const datos = {
+    // Validación con las fechas tal como las escribe el usuario (YYYY-MM-DD)
+    const errorValidacion = primerError(habitoSchema, {
       nombre,
       descripcion: descripcion || undefined,
       categoria: categoria || undefined,
       frecuencia,
       prioridad,
-    };
-
-    const errorValidacion = primerError(habitoSchema, datos);
+      fechaInicio: fechaInicio || undefined,
+      fechaFin: fechaFin || undefined,
+    });
     if (errorValidacion) {
       setError(errorValidacion);
       return;
     }
+
+    // Al editar, un campo vacío se envía vacío/null para que el backend lo borre
+    // (con undefined el backend lo interpretaría como "no cambiar").
+    const editando = !!habito;
+    const datos: HabitoInput = {
+      nombre,
+      descripcion: descripcion || (editando ? '' : undefined),
+      categoria: categoria || (editando ? '' : undefined),
+      frecuencia,
+      prioridad,
+      fechaInicio: aFechaApi(fechaInicio),
+      fechaFin: fechaFin ? aFechaApi(fechaFin) : editando ? null : undefined,
+    };
 
     setError(null);
     setGuardando(true);
@@ -137,6 +156,31 @@ export default function HabitoFormDialog({
               </MenuItem>
             ))}
           </TextField>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+            <TextField
+              label="Fecha de inicio"
+              type="date"
+              fullWidth
+              required
+              margin="normal"
+              value={fechaInicio}
+              onChange={(e) => setFechaInicio(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="Fecha de fin"
+              type="date"
+              fullWidth
+              margin="normal"
+              value={fechaFin}
+              onChange={(e) => setFechaFin(e.target.value)}
+              helperText="Opcional: déjala vacía si no termina"
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { min: fechaInicio || undefined },
+              }}
+            />
+          </Box>
           <TextField
             label="Prioridad"
             type="number"

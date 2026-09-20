@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -7,12 +8,24 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHabitoDto } from './dto/create-habito.dto';
 import { UpdateHabitoDto } from './dto/update-habito.dto';
+import { aplicaEnDia } from '../statistics/statistics.utils';
 
 @Injectable()
 export class HabitsService {
   constructor(private prisma: PrismaService) {}
 
+  /** La fecha de fin no puede ser anterior a la de inicio (se compara por día). */
+  private validarRangoFechas(inicio?: string | null, fin?: string | null) {
+    if (inicio && fin && fin.slice(0, 10) < inicio.slice(0, 10)) {
+      throw new BadRequestException(
+        'La fecha de fin no puede ser anterior a la fecha de inicio',
+      );
+    }
+  }
+
   create(usuarioId: string, dto: CreateHabitoDto) {
+    this.validarRangoFechas(dto.fechaInicio ?? new Date().toISOString(), dto.fechaFin);
+
     return this.prisma.habito.create({
       data: {
         nombre: dto.nombre,
@@ -49,14 +62,26 @@ export class HabitsService {
   }
 
   async update(usuarioId: string, id: string, dto: UpdateHabitoDto) {
-    await this.findOne(usuarioId, id);
+    const actual = await this.findOne(usuarioId, id);
+
+    // Valores finales tras el cambio (lo que no se envía se conserva)
+    const inicioFinal = dto.fechaInicio ?? actual.fechaInicio.toISOString();
+    const finFinal =
+      dto.fechaFin === null ? null : (dto.fechaFin ?? actual.fechaFin?.toISOString());
+    this.validarRangoFechas(inicioFinal, finFinal);
 
     return this.prisma.habito.update({
       where: { id },
       data: {
         ...dto,
         fechaInicio: dto.fechaInicio ? new Date(dto.fechaInicio) : undefined,
-        fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : undefined,
+        // null quita la fecha de fin; undefined la deja como estaba
+        fechaFin:
+          dto.fechaFin === null
+            ? null
+            : dto.fechaFin
+              ? new Date(dto.fechaFin)
+              : undefined,
       },
     });
   }
@@ -98,7 +123,16 @@ export class HabitsService {
   }
 
   async completar(usuarioId: string, habitoId: string) {
-    await this.findOne(usuarioId, habitoId);
+    const habito = await this.findOne(usuarioId, habitoId);
+
+    if (!habito.activo) {
+      throw new BadRequestException('Este hábito está inactivo');
+    }
+    if (!aplicaEnDia(habito, new Date())) {
+      throw new BadRequestException(
+        'Este hábito no está vigente hoy (revisa sus fechas de inicio y fin)',
+      );
+    }
 
     const { inicio, fin } = this.rangoDeHoy();
     const yaCompletado = await this.prisma.registro.findFirst({

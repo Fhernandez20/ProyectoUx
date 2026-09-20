@@ -33,23 +33,34 @@ export const perfilSchema = z.object({
   nombre: registerSchema.shape.nombre,
 });
 
-export const habitoSchema = z.object({
-  nombre: z
-    .string()
-    .min(2, 'El nombre debe tener al menos 2 caracteres')
-    .max(100, 'El nombre es demasiado largo'),
-  descripcion: z.string().max(500, 'La descripción es demasiado larga').optional(),
-  categoria: z.string().max(50, 'La categoría es demasiado larga').optional(),
-  frecuencia: z.enum(['diario', 'semanal', 'personalizada'], {
-    message: 'Selecciona una frecuencia válida',
-  }),
-  prioridad: z
-    .number()
-    .int('La prioridad debe ser un número entero')
-    .min(1, 'La prioridad mínima es 1')
-    .max(10, 'La prioridad máxima es 10')
-    .optional(),
-});
+const fechaInput = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ingresa una fecha válida');
+
+export const habitoSchema = z
+  .object({
+    nombre: z
+      .string()
+      .min(2, 'El nombre debe tener al menos 2 caracteres')
+      .max(100, 'El nombre es demasiado largo'),
+    descripcion: z.string().max(500, 'La descripción es demasiado larga').optional(),
+    categoria: z.string().max(50, 'La categoría es demasiado larga').optional(),
+    frecuencia: z.enum(['diario', 'semanal', 'personalizada'], {
+      message: 'Selecciona una frecuencia válida',
+    }),
+    prioridad: z
+      .number()
+      .int('La prioridad debe ser un número entero')
+      .min(1, 'La prioridad mínima es 1')
+      .max(10, 'La prioridad máxima es 10')
+      .optional(),
+    fechaInicio: fechaInput.optional(),
+    fechaFin: fechaInput.optional(),
+  })
+  .refine((d) => !d.fechaInicio || !d.fechaFin || d.fechaFin >= d.fechaInicio, {
+    message: 'La fecha de fin no puede ser anterior a la fecha de inicio',
+    path: ['fechaFin'],
+  });
 
 export type HabitoFormData = z.infer<typeof habitoSchema>;
 

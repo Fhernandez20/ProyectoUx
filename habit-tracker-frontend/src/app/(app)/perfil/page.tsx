@@ -131,7 +131,7 @@ export default function PerfilPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 5 }}>
-          <Card variant="outlined" sx={{ height: '100%' }}>
+          <Card variant="outlined">
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
               <Avatar
                 sx={{
