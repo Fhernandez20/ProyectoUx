@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
-import { authApi, Usuario, ApiError } from './api';
+import { authApi, usersApi, Usuario, ApiError } from './api';
 
 interface AuthContextValue {
   usuario: Usuario | null;
@@ -19,6 +19,7 @@ interface AuthContextValue {
     contrasena: string,
   ) => Promise<void>;
   logout: () => void;
+  actualizarUsuario: (usuario: Usuario) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    authApi
+    usersApi
       .me()
       .then((data) => setUsuario(data))
       .catch(() => {
@@ -60,9 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
   }
 
+  // Para refrescar el nombre en la Navbar después de editar el perfil
+  function actualizarUsuario(actualizado: Usuario) {
+    setUsuario(actualizado);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ usuario, cargando, login, register, logout }}
+      value={{ usuario, cargando, login, register, logout, actualizarUsuario }}
     >
       {children}
     </AuthContext.Provider>

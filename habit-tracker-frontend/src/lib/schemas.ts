@@ -29,6 +29,10 @@ export const registerSchema = z.object({
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
 
+export const perfilSchema = z.object({
+  nombre: registerSchema.shape.nombre,
+});
+
 export const habitoSchema = z.object({
   nombre: z
     .string()

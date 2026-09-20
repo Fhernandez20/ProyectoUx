@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, CircularProgress, Toolbar } from '@mui/material';
 import { useAuth } from '@/lib/auth-context';
@@ -14,6 +14,7 @@ export default function AppLayout({
 }) {
   const { usuario, cargando } = useAuth();
   const router = useRouter();
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   useEffect(() => {
     if (!cargando && !usuario) {
@@ -38,12 +39,16 @@ export default function AppLayout({
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <Navbar />
-      <Sidebar />
+      <Navbar onMenuClick={() => setMenuAbierto(true)} />
+      <Sidebar
+        mobileOpen={menuAbierto}
+        onClose={() => setMenuAbierto(false)}
+      />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0, // evita que tablas/gráficas anchas desborden en móvil
           p: { xs: 2, sm: 3 },
           bgcolor: 'background.default',
           minHeight: '100vh',

@@ -28,6 +28,14 @@ async function request<T>(
     },
   });
 
+  // Token vencido o inválido en medio de la sesión: se limpia y se vuelve al login.
+  // (En login/registro un 401 significa "credenciales incorrectas", no sesión vencida.)
+  if (res.status === 401 && token && !path.startsWith('/auth/')) {
+    sessionStorage.removeItem('access_token');
+    window.location.assign('/login');
+    return new Promise<T>(() => {}); // la página se recarga; no se sigue procesando
+  }
+
   if (!res.ok) {
     let message = 'Ocurrió un error. Intenta de nuevo.';
     try {
@@ -51,6 +59,7 @@ export interface Usuario {
   userId?: string;
   nombre: string;
   correo: string;
+  fechaRegistro?: string;
 }
 
 export interface AuthResponse {
@@ -94,6 +103,18 @@ export const authApi = {
     }),
 
   me: () => request<Usuario>('/auth/me'),
+};
+
+// ----- Users -----
+export const usersApi = {
+  // Datos frescos desde la base de datos (el token puede tener un nombre viejo)
+  me: () => request<Usuario>('/users/me'),
+
+  actualizar: (data: { nombre: string }) =>
+    request<Usuario>('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 };
 
 // ----- Habits -----
