@@ -18,7 +18,10 @@ import { useSeguimiento } from '@/lib/useSeguimiento';
 import type { DiaSeguimiento } from '@/lib/api';
 import {
   capitalizar,
+  estadoDia,
   fechaLarga,
+  inactivosCompletados,
+  intensidadParcial,
   moverMes,
   ordenarHabitos,
   parseClave,
@@ -29,6 +32,7 @@ import {
 import NavegadorPeriodo from './NavegadorPeriodo';
 import ResumenPeriodo from './ResumenPeriodo';
 import ListaHabitosDia from './ListaHabitosDia';
+import ListaInactivosDia from './ListaInactivosDia';
 
 const ENCABEZADOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -63,9 +67,24 @@ export default function VistaMensual() {
   const verde = (pct: number) => alpha(theme.palette.success.main, 0.2 + 0.6 * (pct / 100));
   const rojo = alpha(theme.palette.error.main, 0.1);
 
+  // Los conteos usan solo hábitos activos (d.completados) sobre los que tocaban ese día
+  function conteoDia(d: DiaSeguimiento | undefined) {
+    return { hechos: d?.completados ?? 0, total: d?.aplicanIds.length ?? 0 };
+  }
+
   function colorDia(d: DiaSeguimiento | undefined, futuro: boolean): string {
-    if (futuro || !d || d.aplicanIds.length === 0) return 'transparent';
-    return d.completadosIds.length === 0 ? rojo : verde(d.porcentaje);
+    if (futuro) return 'transparent';
+    const { hechos, total } = conteoDia(d);
+    switch (estadoDia(hechos, total)) {
+      case 'sin-habitos':
+        return 'transparent';
+      case 'ninguno':
+        return rojo;
+      case 'parcial':
+        return verde(intensidadParcial(hechos, total));
+      case 'completo':
+        return verde(100);
+    }
   }
 
   function cambiarMes(delta: number) {
@@ -143,8 +162,7 @@ export default function VistaMensual() {
                     const d = porFecha.get(f);
                     const futuro = f > hoy;
                     const elegido = f === seleccion;
-                    const hechos = d?.completadosIds.length ?? 0;
-                    const total = d?.aplicanIds.length ?? 0;
+                    const { hechos, total } = conteoDia(d);
                     return (
                       <ButtonBase
                         key={f}
@@ -192,7 +210,7 @@ export default function VistaMensual() {
 
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
                 <LeyendaColor color={rojo} texto="Ninguno completado" />
-                <LeyendaColor color={verde(40)} texto="Parcial" />
+                <LeyendaColor color={verde(45)} texto="Parcial" />
                 <LeyendaColor color={verde(100)} texto="Todo completado" />
               </Box>
             </CardContent>
@@ -218,6 +236,9 @@ export default function VistaMensual() {
                       esHoy={seleccion === hoy}
                     />
                   )}
+                  <ListaInactivosDia
+                    habitos={inactivosCompletados(datos.habitos, diaElegido)}
+                  />
                 </>
               )}
             </CardContent>

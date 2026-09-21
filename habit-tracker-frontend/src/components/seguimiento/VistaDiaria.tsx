@@ -17,11 +17,13 @@ import { useSeguimiento } from '@/lib/useSeguimiento';
 import {
   capitalizar,
   fechaLarga,
+  inactivosCompletados,
   ordenarHabitos,
   sumarDiasClave,
 } from '@/lib/seguimiento';
 import NavegadorPeriodo from './NavegadorPeriodo';
 import ListaHabitosDia from './ListaHabitosDia';
+import ListaInactivosDia from './ListaInactivosDia';
 
 export default function VistaDiaria() {
   const hoy = hoyLocal();
@@ -55,6 +57,7 @@ export default function VistaDiaria() {
     ? habitosDia.filter((h) => dia.completadosIds.includes(h.id)).length
     : 0;
   const progreso = habitosDia.length ? Math.round((hechos / habitosDia.length) * 100) : 0;
+  const inactivos = listo ? inactivosCompletados(datos.habitos, dia ?? undefined) : [];
 
   return (
     <Box>
@@ -113,6 +116,7 @@ export default function VistaDiaria() {
                 />
               </>
             )}
+            <ListaInactivosDia habitos={inactivos} />
           </CardContent>
         </Card>
       )}

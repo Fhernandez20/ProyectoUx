@@ -4,6 +4,7 @@
  */
 
 import { nivelPrioridad } from './prioridad';
+import type { DiaSeguimiento, HabitoSeguimiento } from './api';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -118,4 +119,30 @@ export function ordenarHabitos<T extends { prioridad: number | null; nombre: str
       nivelPrioridad(a.prioridad) - nivelPrioridad(b.prioridad) ||
       a.nombre.localeCompare(b.nombre, 'es'),
   );
+}
+
+/**
+ * Hábitos inactivos que se completaron ese día. Se muestran aparte (en gris):
+ * conservan su historial, pero no cuentan en el cumplimiento.
+ */
+export function inactivosCompletados(
+  habitos: HabitoSeguimiento[],
+  dia?: DiaSeguimiento,
+): HabitoSeguimiento[] {
+  if (!dia) return [];
+  return habitos.filter((h) => !h.activo && dia.completadosIds.includes(h.id));
+}
+
+export type EstadoDia = 'sin-habitos' | 'ninguno' | 'parcial' | 'completo';
+
+/** Estado de un día según cuántos de los hábitos que tocaban se completaron. */
+export function estadoDia(hechos: number, total: number): EstadoDia {
+  if (total <= 0) return 'sin-habitos';
+  if (hechos <= 0) return 'ninguno';
+  return hechos >= total ? 'completo' : 'parcial';
+}
+
+/** Intensidad (20 a 70) del verde de un día parcial, según el avance. */
+export function intensidadParcial(hechos: number, total: number): number {
+  return 20 + 50 * (hechos / total);
 }

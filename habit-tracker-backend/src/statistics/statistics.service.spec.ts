@@ -118,3 +118,47 @@ describe('StatisticsService.seguimiento - contenido', () => {
     expect(r.resumen.porcentaje).toBe(0);
   });
 });
+
+describe('StatisticsService.seguimiento - hábitos inactivos', () => {
+  // A activo. C inactivo, pero con un completado el 18 y otro el 19.
+  const habitos = [
+    habito({ id: 'A', nombre: 'Leer' }),
+    habito({ id: 'C', nombre: 'Viejo', activo: false }),
+  ];
+  const registros = [
+    { habitoId: 'C', fecha: fecha(18) },
+    { habitoId: 'A', fecha: fecha(19) },
+    { habitoId: 'C', fecha: fecha(19) },
+  ];
+
+  it('conserva lo completado por un inactivo en completadosIds, pero no lo cuenta', async () => {
+    const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-18', '2026-09-19');
+    const [d18, d19] = r.dias;
+
+    expect(d18.completadosIds).toEqual(['C']); // se ve en el historial...
+    expect(d18.completados).toBe(0); // ...pero no cuenta
+    expect(d18.aplicanIds).toEqual(['A']); // un inactivo nunca "toca"
+
+    expect(d19.completadosIds.sort()).toEqual(['A', 'C']);
+    expect(d19.completados).toBe(1); // solo A
+    expect(d19.porcentaje).toBe(100);
+  });
+
+  it('el hábito inactivo aparece en la lista (con activo: false) si tiene actividad en el rango', async () => {
+    const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-18', '2026-09-19');
+    const c = r.habitos.find((h) => h.id === 'C');
+    expect(c).toBeDefined();
+    expect(c?.activo).toBe(false);
+  });
+
+  it('un inactivo sin actividad en el rango no aparece', async () => {
+    const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-05', '2026-09-06');
+    expect(r.habitos.map((h) => h.id)).toEqual(['A']);
+  });
+
+  it('diasConActividad ignora los días en que solo se completó un inactivo', async () => {
+    const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-18', '2026-09-19');
+    expect(r.resumen.diasConActividad).toBe(1); // solo el 19; el 18 fue únicamente el inactivo
+    expect(r.resumen.completados).toBe(1);
+  });
+});

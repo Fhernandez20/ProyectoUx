@@ -176,6 +176,9 @@ export class StatisticsService {
     const idsExistentes = new Set(datos.habitos.map((h) => h.id));
     const relevantes = new Set<string>();
 
+    // completados / esperados / porcentaje: solo hábitos activos y vigentes ese día.
+    // completadosIds: TODO lo completado ese día, incluso de hábitos inactivos (el
+    // historial se conserva para poder mostrarlo aparte, pero no cuenta en el cumplimiento).
     const dias: {
       fecha: string;
       completados: number;
@@ -239,7 +242,8 @@ export class StatisticsService {
         completados: totalCompletados,
         esperados: redondear1(totalEsperados),
         porcentaje: porcentaje(totalCompletados, totalEsperados),
-        diasConActividad: dias.filter((d) => d.completadosIds.length > 0).length,
+        // Solo cuentan los hábitos activos: completar uno inactivo no es "actividad"
+        diasConActividad: dias.filter((d) => d.completados > 0).length,
       },
     };
   }

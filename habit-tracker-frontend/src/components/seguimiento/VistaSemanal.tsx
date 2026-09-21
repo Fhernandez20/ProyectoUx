@@ -6,6 +6,7 @@ import {
   Box,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   LinearProgress,
   Table,
@@ -20,6 +21,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import UncheckedIcon from '@mui/icons-material/RadioButtonUncheckedOutlined';
+import type { HabitoSeguimiento } from '@/lib/api';
 import { hoyLocal } from '@/lib/fechas';
 import { useSeguimiento } from '@/lib/useSeguimiento';
 import {
@@ -34,6 +36,15 @@ import {
 import NavegadorPeriodo from './NavegadorPeriodo';
 import ResumenPeriodo from './ResumenPeriodo';
 
+// Columna del nombre fija a la izquierda al hacer scroll horizontal
+const celdaNombre = {
+  position: 'sticky',
+  left: 0,
+  bgcolor: 'background.paper',
+  zIndex: 1,
+  minWidth: 130,
+} as const;
+
 export default function VistaSemanal() {
   const hoy = hoyLocal();
   const theme = useTheme();
@@ -45,6 +56,78 @@ export default function VistaSemanal() {
   const listo = datos && datos.desde === desde;
   const porFecha = new Map(listo ? datos.dias.map((d) => [d.fecha, d]) : []);
   const habitos = listo ? ordenarHabitos(datos.habitos) : [];
+  const activos = habitos.filter((h) => h.activo);
+  // Inactivos: se muestran aparte y en gris; no cuentan en el cumplimiento
+  const inactivos = habitos.filter((h) => !h.activo);
+
+  const resaltarHoy = (f: string) =>
+    f === hoy ? alpha(theme.palette.secondary.main, 0.08) : undefined;
+
+  function celda(h: HabitoSeguimiento, f: string) {
+    const d = porFecha.get(f);
+    const completado = d?.completadosIds.includes(h.id) ?? false;
+    const toca = d?.aplicanIds.includes(h.id) ?? false;
+    const futuro = f > hoy;
+    const inactivo = !h.activo;
+
+    if (completado) {
+      return (
+        <CheckCircleIcon
+          fontSize="small"
+          color={inactivo ? 'inherit' : 'success'}
+          sx={inactivo ? { color: 'text.disabled' } : undefined}
+          titleAccess={inactivo ? 'Completado (hábito inactivo)' : 'Completado'}
+        />
+      );
+    }
+    // ○ solo en hábitos activos que tocaban ese día. Un hábito semanal se cumple
+    // una vez por semana, así que no se marca como fallado cada día.
+    if (!inactivo && toca && !futuro && h.frecuencia !== 'semanal') {
+      return (
+        <UncheckedIcon
+          fontSize="small"
+          sx={{ color: 'text.disabled' }}
+          titleAccess={f === hoy ? 'Pendiente' : 'No completado'}
+        />
+      );
+    }
+    return (
+      <Box component="span" role="img" aria-label={futuro ? 'Aún no llega' : 'Sin marcar'} sx={{ color: 'text.disabled' }}>
+        ·
+      </Box>
+    );
+  }
+
+  /** Para hábitos semanales: se cumple con un solo día completado en la semana. */
+  function estadoSemanal(h: HabitoSeguimiento): string {
+    const cumplido = dias.some((f) => porFecha.get(f)?.completadosIds.includes(h.id));
+    if (cumplido) return 'cumplido';
+    return hasta < hoy ? 'no cumplido' : 'pendiente';
+  }
+
+  function fila(h: HabitoSeguimiento) {
+    const inactivo = !h.activo;
+    return (
+      <TableRow key={h.id}>
+        <TableCell sx={{ ...celdaNombre, fontWeight: 500, color: inactivo ? 'text.disabled' : undefined }}>
+          {h.nombre}
+          {inactivo && (
+            <Chip label="Inactivo" size="small" variant="outlined" sx={{ ml: 1 }} />
+          )}
+          {!inactivo && h.frecuencia === 'semanal' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
+              Semanal · {estadoSemanal(h)}
+            </Typography>
+          )}
+        </TableCell>
+        {dias.map((f) => (
+          <TableCell key={f} align="center" sx={{ bgcolor: resaltarHoy(f) }}>
+            {celda(h, f)}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+  }
 
   return (
     <Box>
@@ -91,17 +174,13 @@ export default function VistaSemanal() {
                   <Table size="small" aria-label="Seguimiento semanal por hábito">
                     <TableHead>
                       <TableRow>
-                        <TableCell
-                          sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 1 }}
-                        >
-                          Hábito
-                        </TableCell>
+                        <TableCell sx={celdaNombre}>Hábito</TableCell>
                         {dias.map((f) => (
                           <TableCell
                             key={f}
                             align="center"
                             sx={{
-                              bgcolor: f === hoy ? alpha(theme.palette.secondary.main, 0.08) : undefined,
+                              bgcolor: resaltarHoy(f),
                               fontWeight: f === hoy ? 600 : 400,
                               lineHeight: 1.2,
                             }}
@@ -115,77 +194,33 @@ export default function VistaSemanal() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {habitos.map((h) => (
-                        <TableRow key={h.id}>
-                          <TableCell
-                            sx={{
-                              position: 'sticky',
-                              left: 0,
-                              bgcolor: 'background.paper',
-                              zIndex: 1,
-                              fontWeight: 500,
-                              minWidth: 120,
-                            }}
-                          >
-                            {h.nombre}
-                          </TableCell>
-                          {dias.map((f) => {
-                            const d = porFecha.get(f);
-                            const completado = d?.completadosIds.includes(h.id) ?? false;
-                            const toca = d?.aplicanIds.includes(h.id) ?? false;
-                            const futuro = f > hoy;
-                            return (
-                              <TableCell
-                                key={f}
-                                align="center"
-                                sx={{
-                                  bgcolor: f === hoy ? alpha(theme.palette.secondary.main, 0.08) : undefined,
-                                }}
-                              >
-                                {completado ? (
-                                  <CheckCircleIcon
-                                    color="success"
-                                    fontSize="small"
-                                    aria-label="Completado"
-                                  />
-                                ) : toca && !futuro ? (
-                                  <UncheckedIcon
-                                    fontSize="small"
-                                    sx={{ color: 'text.disabled' }}
-                                    aria-label={f === hoy ? 'Pendiente' : 'No completado'}
-                                  />
-                                ) : (
-                                  <Box
-                                    component="span"
-                                    sx={{ color: 'text.disabled' }}
-                                    aria-label={futuro ? 'Aún no llega' : 'No aplica'}
-                                  >
-                                    ·
-                                  </Box>
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
+                      {activos.map(fila)}
+
                       <TableRow>
-                        <TableCell
-                          sx={{
-                            position: 'sticky',
-                            left: 0,
-                            bgcolor: 'background.paper',
-                            zIndex: 1,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Completados
-                        </TableCell>
+                        <TableCell sx={{ ...celdaNombre, fontWeight: 600 }}>Completados</TableCell>
                         {dias.map((f) => (
                           <TableCell key={f} align="center" sx={{ fontWeight: 600 }}>
                             {f > hoy ? '' : (porFecha.get(f)?.completados ?? 0)}
                           </TableCell>
                         ))}
                       </TableRow>
+
+                      {inactivos.length > 0 && (
+                        <>
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              sx={{
+                                bgcolor: alpha(theme.palette.text.primary, 0.04),
+                                color: 'text.secondary',
+                              }}
+                            >
+                              Inactivos · no cuentan en el cumplimiento
+                            </TableCell>
+                          </TableRow>
+                          {inactivos.map(fila)}
+                        </>
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
