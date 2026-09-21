@@ -1,5 +1,6 @@
 import type { Habito } from './api';
 import { fechaLocal, hoyLocal } from './fechas';
+import { nivelPrioridad } from './prioridad';
 
 export type EstadoFiltro = 'todos' | 'activos' | 'inactivos' | 'finalizados';
 export type OrdenHabitos = 'prioridad' | 'nombre' | 'inicio';
@@ -82,9 +83,10 @@ export function aplicarFiltros(
     if (f.orden === 'inicio') {
       return fechaLocal(b.fechaInicio).localeCompare(fechaLocal(a.fechaInicio));
     }
-    // prioridad: número menor = más importante; sin prioridad al final
-    const pa = a.prioridad ?? Number.MAX_SAFE_INTEGER;
-    const pb = b.prioridad ?? Number.MAX_SAFE_INTEGER;
-    return pa - pb || a.nombre.localeCompare(b.nombre, 'es');
+    // prioridad: Alta primero, luego Media y Baja; a igual nivel, por nombre
+    return (
+      nivelPrioridad(a.prioridad) - nivelPrioridad(b.prioridad) ||
+      a.nombre.localeCompare(b.nombre, 'es')
+    );
   });
 }

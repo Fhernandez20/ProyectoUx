@@ -51,8 +51,8 @@ export const habitoSchema = z
     prioridad: z
       .number()
       .int('La prioridad debe ser un número entero')
-      .min(1, 'La prioridad mínima es 1')
-      .max(10, 'La prioridad máxima es 10')
+      .min(1, 'Selecciona una prioridad válida')
+      .max(3, 'Selecciona una prioridad válida')
       .optional(),
     fechaInicio: fechaInput.optional(),
     fechaFin: fechaInput.optional(),

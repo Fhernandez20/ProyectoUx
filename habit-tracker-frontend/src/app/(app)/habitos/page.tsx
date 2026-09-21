@@ -29,6 +29,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircleOutlined';
 import { habitsApi, Habito, HabitoInput, ApiError } from '@/lib/api';
 import HabitoFormDialog from '@/components/HabitoFormDialog';
 import { formatoFechaCorta } from '@/lib/fechas';
+import { infoPrioridad } from '@/lib/prioridad';
 import {
   Filtros,
   FILTROS_INICIALES,
@@ -240,7 +241,7 @@ export default function HabitosPage() {
                   })
                 }
               >
-                <MenuItem value="prioridad">Prioridad</MenuItem>
+                <MenuItem value="prioridad">Prioridad (alta primero)</MenuItem>
                 <MenuItem value="nombre">Nombre (A-Z)</MenuItem>
                 <MenuItem value="inicio">Fecha de inicio (recientes)</MenuItem>
               </TextField>
@@ -332,6 +333,12 @@ export default function HabitosPage() {
                   {h.categoria && (
                     <Chip label={h.categoria} size="small" variant="outlined" />
                   )}
+                  <Chip
+                    label={`Prioridad ${infoPrioridad(h.prioridad).label.toLowerCase()}`}
+                    size="small"
+                    variant="outlined"
+                    color={infoPrioridad(h.prioridad).color}
+                  />
                   {!h.activo && (
                     <Chip label="Inactivo" size="small" color="default" />
                   )}

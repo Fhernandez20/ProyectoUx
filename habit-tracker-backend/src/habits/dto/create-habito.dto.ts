@@ -5,6 +5,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -24,8 +26,11 @@ export class CreateHabitoDto {
   @IsIn(['diario', 'semanal', 'personalizada'])
   frecuencia: string;
 
+  // Nivel: 1 = alta, 2 = media, 3 = baja
   @IsOptional()
   @IsInt()
+  @Min(1, { message: 'La prioridad debe ser 1 (alta), 2 (media) o 3 (baja)' })
+  @Max(3, { message: 'La prioridad debe ser 1 (alta), 2 (media) o 3 (baja)' })
   prioridad?: number;
 
   @IsOptional()

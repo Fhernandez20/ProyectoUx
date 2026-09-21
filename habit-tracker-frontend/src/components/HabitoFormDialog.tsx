@@ -16,6 +16,7 @@ import {
 import { Habito, HabitoInput, ApiError } from '@/lib/api';
 import { habitoSchema, primerError } from '@/lib/schemas';
 import { aFechaApi, fechaLocal, hoyLocal } from '@/lib/fechas';
+import { PRIORIDADES, nivelPrioridad } from '@/lib/prioridad';
 
 interface Props {
   open: boolean;
@@ -41,7 +42,7 @@ export default function HabitoFormDialog({
   const [categoria, setCategoria] = useState('');
   const [frecuencia, setFrecuencia] =
     useState<HabitoInput['frecuencia']>('diario');
-  const [prioridad, setPrioridad] = useState(1);
+  const [prioridad, setPrioridad] = useState<number>(2);
   const [fechaInicio, setFechaInicio] = useState(hoyLocal());
   const [fechaFin, setFechaFin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export default function HabitoFormDialog({
       setDescripcion(habito?.descripcion ?? '');
       setCategoria(habito?.categoria ?? '');
       setFrecuencia(habito?.frecuencia ?? 'diario');
-      setPrioridad(habito?.prioridad ?? 1);
+      setPrioridad(nivelPrioridad(habito?.prioridad));
       setFechaInicio(habito ? fechaLocal(habito.fechaInicio) : hoyLocal());
       setFechaFin(habito?.fechaFin ? fechaLocal(habito.fechaFin) : '');
       setError(null);
@@ -182,14 +183,20 @@ export default function HabitoFormDialog({
             />
           </Box>
           <TextField
+            select
             label="Prioridad"
-            type="number"
             fullWidth
             margin="normal"
             value={prioridad}
             onChange={(e) => setPrioridad(Number(e.target.value))}
-            slotProps={{ htmlInput: { min: 1 } }}
-          />
+            helperText="Los hábitos de prioridad alta aparecen primero en tu lista"
+          >
+            {PRIORIDADES.map((p) => (
+              <MenuItem key={p.valor} value={p.valor}>
+                {p.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose} disabled={guardando}>
