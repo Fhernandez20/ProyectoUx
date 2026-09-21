@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { HabitsService } from './habits.service';
 import { CreateHabitoDto } from './dto/create-habito.dto';
 import { UpdateHabitoDto } from './dto/update-habito.dto';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 
 interface RequestConUsuario extends ExpressRequest {
   user: { userId: string; correo: string; nombre: string };
@@ -41,36 +42,36 @@ export class HabitsController {
   }
 
   @Get(':id')
-  findOne(@Request() req: RequestConUsuario, @Param('id') id: string) {
+  findOne(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
     return this.habitsService.findOne(req.user.userId, id);
   }
 
   @Patch(':id')
   update(
     @Request() req: RequestConUsuario,
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateHabitoDto,
   ) {
     return this.habitsService.update(req.user.userId, id, dto);
   }
 
   @Patch(':id/toggle')
-  toggleActivo(@Request() req: RequestConUsuario, @Param('id') id: string) {
+  toggleActivo(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
     return this.habitsService.toggleActivo(req.user.userId, id);
   }
 
   @Post(':id/completar')
-  completar(@Request() req: RequestConUsuario, @Param('id') id: string) {
+  completar(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
     return this.habitsService.completar(req.user.userId, id);
   }
 
   @Get(':id/registros')
-  historial(@Request() req: RequestConUsuario, @Param('id') id: string) {
+  historial(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
     return this.habitsService.historial(req.user.userId, id);
   }
 
   @Delete(':id')
-  remove(@Request() req: RequestConUsuario, @Param('id') id: string) {
+  remove(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
     return this.habitsService.remove(req.user.userId, id);
   }
 }
