@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
 import ChecklistIcon from '@mui/icons-material/ChecklistOutlined';
+import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined';
 import BarChartIcon from '@mui/icons-material/BarChartOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlineOutlined';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,6 +22,7 @@ const DRAWER_WIDTH = 220;
 const items = [
   { label: 'Dashboard', href: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Mis hábitos', href: '/habitos', icon: <ChecklistIcon /> },
+  { label: 'Seguimiento', href: '/seguimiento', icon: <CalendarIcon /> },
   { label: 'Estadísticas', href: '/estadisticas', icon: <BarChartIcon /> },
   { label: 'Perfil', href: '/perfil', icon: <PersonIcon /> },
 ];

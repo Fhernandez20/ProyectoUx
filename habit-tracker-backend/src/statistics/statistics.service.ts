@@ -1,15 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   HabitoBase,
+  aplicaEnDia,
   calcularRachas,
   claveDia,
   evaluarDia,
+  fechaDesdeClave,
   inicioDelDia,
   porcentaje,
   redondear1,
   sumarDias,
 } from './statistics.utils';
+
+/** Rango máximo que se puede consultar en el seguimiento (2 meses). */
+export const MAX_DIAS_SEGUIMIENTO = 62;
 
 interface Datos {
   habitos: HabitoBase[];
@@ -135,6 +140,108 @@ export class StatisticsService {
       });
     }
     return resultado;
+  }
+
+  private parsearClave(clave: string, nombre: string): Date {
+    const fecha = fechaDesdeClave(clave);
+    // Rechaza fechas que no existen (ej. 2026-02-31, que JS "corregiría" a marzo)
+    if (Number.isNaN(fecha.getTime()) || claveDia(fecha) !== clave) {
+      throw new BadRequestException(`${nombre} no es una fecha válida`);
+    }
+    return fecha;
+  }
+
+  /**
+   * Seguimiento día por día entre `desdeClave` y `hastaClave` (inclusive):
+   * para cada día, qué hábitos tocaban y cuáles se completaron. Con un solo día
+   * sirve de vista diaria; con 7 de semanal; con un mes, de calendario mensual.
+   */
+  async seguimiento(usuarioId: string, desdeClave: string, hastaClave: string) {
+    const desde = this.parsearClave(desdeClave, 'La fecha inicial');
+    const hasta = this.parsearClave(hastaClave, 'La fecha final');
+    if (hasta < desde) {
+      throw new BadRequestException(
+        'La fecha final no puede ser anterior a la inicial',
+      );
+    }
+    const cantidad =
+      Math.round((hasta.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    if (cantidad > MAX_DIAS_SEGUIMIENTO) {
+      throw new BadRequestException(
+        `El rango máximo es de ${MAX_DIAS_SEGUIMIENTO} días`,
+      );
+    }
+
+    const datos = await this.cargarDatos(usuarioId);
+    const idsExistentes = new Set(datos.habitos.map((h) => h.id));
+    const relevantes = new Set<string>();
+
+    const dias: {
+      fecha: string;
+      completados: number;
+      esperados: number;
+      porcentaje: number;
+      completadosIds: string[];
+      aplicanIds: string[];
+    }[] = [];
+    let totalCompletados = 0;
+    let totalEsperados = 0;
+
+    for (let i = 0; i < cantidad; i++) {
+      const dia = sumarDias(desde, i);
+      const clave = claveDia(dia);
+      const hechos = datos.porDia.get(clave);
+      const r = evaluarDia(datos.habitos, hechos, dia);
+
+      const aplicanIds = datos.habitos
+        .filter((h) => aplicaEnDia(h, dia))
+        .map((h) => h.id);
+      const completadosIds = [...(hechos ?? [])].filter((id) =>
+        idsExistentes.has(id),
+      );
+      aplicanIds.forEach((id) => relevantes.add(id));
+      completadosIds.forEach((id) => relevantes.add(id));
+
+      totalCompletados += r.completados;
+      totalEsperados += r.esperados;
+      dias.push({
+        fecha: clave,
+        completados: r.completados,
+        esperados: redondear1(r.esperados),
+        porcentaje: porcentaje(r.completados, r.esperados),
+        completadosIds,
+        aplicanIds,
+      });
+    }
+
+    // Solo los hábitos que tocaban o se completaron en el rango
+    const habitos = datos.habitos
+      .filter((h) => relevantes.has(h.id))
+      .map((h) => ({
+        id: h.id,
+        nombre: h.nombre,
+        frecuencia: h.frecuencia,
+        activo: h.activo,
+        prioridad: h.prioridad ?? null,
+      }))
+      .sort(
+        (a, b) =>
+          (a.prioridad ?? 99) - (b.prioridad ?? 99) ||
+          a.nombre.localeCompare(b.nombre, 'es'),
+      );
+
+    return {
+      desde: desdeClave,
+      hasta: hastaClave,
+      habitos,
+      dias,
+      resumen: {
+        completados: totalCompletados,
+        esperados: redondear1(totalEsperados),
+        porcentaje: porcentaje(totalCompletados, totalEsperados),
+        diasConActividad: dias.filter((d) => d.completadosIds.length > 0).length,
+      },
+    };
   }
 
   /** Seguimiento por hábito: hoy, semana, mes y rachas propias. */

@@ -2,7 +2,11 @@ import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StatisticsService } from './statistics.service';
-import { ActividadQueryDto, TendenciaQueryDto } from './dto/statistics-query.dto';
+import {
+  ActividadQueryDto,
+  SeguimientoQueryDto,
+  TendenciaQueryDto,
+} from './dto/statistics-query.dto';
 
 interface RequestConUsuario extends ExpressRequest {
   user: { userId: string; correo: string; nombre: string };
@@ -35,6 +39,22 @@ export class StatisticsController {
     @Query() query: TendenciaQueryDto,
   ) {
     return this.statisticsService.tendencia(req.user.userId, query.semanas);
+  }
+
+  /**
+   * Seguimiento día por día en un rango (máx. 62 días): qué hábitos tocaban y
+   * cuáles se completaron cada día. Sirve para las vistas diaria, semanal y mensual.
+   */
+  @Get('seguimiento')
+  seguimiento(
+    @Request() req: RequestConUsuario,
+    @Query() query: SeguimientoQueryDto,
+  ) {
+    return this.statisticsService.seguimiento(
+      req.user.userId,
+      query.desde,
+      query.hasta,
+    );
   }
 
   /** Seguimiento por hábito (hoy / semana / mes / rachas). */

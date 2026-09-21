@@ -185,6 +185,36 @@ export interface HabitoStats {
   mejorRacha: number;
 }
 
+export interface HabitoSeguimiento {
+  id: string;
+  nombre: string;
+  frecuencia: string;
+  activo: boolean;
+  prioridad: number | null;
+}
+
+export interface DiaSeguimiento {
+  fecha: string; // "2026-09-18"
+  completados: number;
+  esperados: number;
+  porcentaje: number;
+  completadosIds: string[]; // hábitos completados ese día
+  aplicanIds: string[]; // hábitos que tocaban ese día
+}
+
+export interface Seguimiento {
+  desde: string;
+  hasta: string;
+  habitos: HabitoSeguimiento[];
+  dias: DiaSeguimiento[];
+  resumen: {
+    completados: number;
+    esperados: number;
+    porcentaje: number;
+    diasConActividad: number;
+  };
+}
+
 export const statsApi = {
   resumen: () => request<ResumenStats>('/statistics/resumen'),
   actividad: (dias: number) =>
@@ -192,4 +222,7 @@ export const statsApi = {
   tendencia: (semanas: number) =>
     request<SemanaTendencia[]>(`/statistics/tendencia?semanas=${semanas}`),
   porHabito: () => request<HabitoStats[]>('/statistics/habitos'),
+  // Rango máximo: 62 días. Fechas en formato "AAAA-MM-DD".
+  seguimiento: (desde: string, hasta: string) =>
+    request<Seguimiento>(`/statistics/seguimiento?desde=${desde}&hasta=${hasta}`),
 };

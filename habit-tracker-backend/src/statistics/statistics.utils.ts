@@ -13,6 +13,7 @@ export interface HabitoBase {
   frecuencia: string; // 'diario' | 'semanal' | 'personalizada'
   fechaInicio: Date;
   fechaFin: Date | null;
+  prioridad?: number | null;
 }
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
