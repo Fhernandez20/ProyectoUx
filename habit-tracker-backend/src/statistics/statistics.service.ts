@@ -13,14 +13,11 @@ import {
   sumarDias,
 } from './statistics.utils';
 
-/** Rango máximo que se puede consultar en el seguimiento (2 meses). */
 export const MAX_DIAS_SEGUIMIENTO = 62;
 
 interface Datos {
   habitos: HabitoBase[];
-  /** día ("2026-09-18") -> ids de hábitos completados ese día (sin duplicados) */
   porDia: Map<string, Set<string>>;
-  /** id de hábito -> días en que se completó */
   porHabito: Map<string, Set<string>>;
 }
 
@@ -52,20 +49,18 @@ export class StatisticsService {
     return { habitos, porDia, porHabito };
   }
 
-  /** Cumplimiento (%) de los `dias` días que terminan en `hasta` (inclusive). */
   private cumplimientoEnRango(datos: Datos, hasta: Date, dias: number): number {
-    let completados = 0;
+    let completados = 0; 
     let esperados = 0;
     for (let i = 0; i < dias; i++) {
       const dia = sumarDias(hasta, -i);
       const r = evaluarDia(datos.habitos, datos.porDia.get(claveDia(dia)), dia);
-      completados += r.completados;
+      completados += r.completadosPonderados;
       esperados += r.esperados;
     }
     return porcentaje(completados, esperados);
   }
 
-  /** Tarjetas del dashboard y de la página de estadísticas. */
   async resumen(usuarioId: string) {
     const datos = await this.cargarDatos(usuarioId);
     const hoy = inicioDelDia(new Date());
@@ -79,19 +74,19 @@ export class StatisticsService {
       habitosFinalizados: datos.habitos.filter(
         (h) => h.fechaFin && inicioDelDia(h.fechaFin) < hoy,
       ).length,
-      completadosHoy: hoyEval.completados,
+      completadosHoy: hoyEval.completados, // conteo simple: "X de Y hábitos"
       esperadosHoy: redondear1(hoyEval.esperados),
       rachaActual: rachas.actual,
       mejorRacha: rachas.mejor,
       cumplimiento: {
-        hoy: porcentaje(hoyEval.completados, hoyEval.esperados),
+        // porcentaje: siempre con el valor ponderado (ver evaluarDia)
+        hoy: porcentaje(hoyEval.completadosPonderados, hoyEval.esperados),
         semana: this.cumplimientoEnRango(datos, hoy, 7),
         mes: this.cumplimientoEnRango(datos, hoy, 30),
       },
     };
   }
 
-  /** Actividad día por día (para la gráfica semanal: dias=7, mensual: dias=30). */
   async actividad(usuarioId: string, dias: number) {
     const n = Math.min(Math.max(dias, 1), 90);
     const datos = await this.cargarDatos(usuarioId);
@@ -110,15 +105,14 @@ export class StatisticsService {
       const r = evaluarDia(datos.habitos, datos.porDia.get(clave), dia);
       resultado.push({
         fecha: clave,
-        completados: r.completados,
+        completados: r.completados, // conteo simple, para la gráfica de barras
         esperados: redondear1(r.esperados),
-        porcentaje: porcentaje(r.completados, r.esperados),
+        porcentaje: porcentaje(r.completadosPonderados, r.esperados), // ponderado
       });
     }
     return resultado;
   }
 
-  /** Cumplimiento semana por semana (últimas `semanas` semanas). */
   async tendencia(usuarioId: string, semanas: number) {
     const n = Math.min(Math.max(semanas, 1), 12);
     const datos = await this.cargarDatos(usuarioId);
@@ -144,18 +138,12 @@ export class StatisticsService {
 
   private parsearClave(clave: string, nombre: string): Date {
     const fecha = fechaDesdeClave(clave);
-    // Rechaza fechas que no existen (ej. 2026-02-31, que JS "corregiría" a marzo)
     if (Number.isNaN(fecha.getTime()) || claveDia(fecha) !== clave) {
       throw new BadRequestException(`${nombre} no es una fecha válida`);
     }
     return fecha;
   }
 
-  /**
-   * Seguimiento día por día entre `desdeClave` y `hastaClave` (inclusive):
-   * para cada día, qué hábitos tocaban y cuáles se completaron. Con un solo día
-   * sirve de vista diaria; con 7 de semanal; con un mes, de calendario mensual.
-   */
   async seguimiento(usuarioId: string, desdeClave: string, hastaClave: string) {
     const desde = this.parsearClave(desdeClave, 'La fecha inicial');
     const hasta = this.parsearClave(hastaClave, 'La fecha final');
@@ -176,9 +164,7 @@ export class StatisticsService {
     const idsExistentes = new Set(datos.habitos.map((h) => h.id));
     const relevantes = new Set<string>();
 
-    // completados / esperados / porcentaje: solo hábitos activos y vigentes ese día.
-    // completadosIds: TODO lo completado ese día, incluso de hábitos inactivos (el
-    // historial se conserva para poder mostrarlo aparte, pero no cuenta en el cumplimiento).
+   
     const dias: {
       fecha: string;
       completados: number;
@@ -187,7 +173,8 @@ export class StatisticsService {
       completadosIds: string[];
       aplicanIds: string[];
     }[] = [];
-    let totalCompletados = 0;
+    let totalCompletados = 0; 
+    let totalCompletadosPonderados = 0; 
     let totalEsperados = 0;
 
     for (let i = 0; i < cantidad; i++) {
@@ -206,18 +193,18 @@ export class StatisticsService {
       completadosIds.forEach((id) => relevantes.add(id));
 
       totalCompletados += r.completados;
+      totalCompletadosPonderados += r.completadosPonderados;
       totalEsperados += r.esperados;
       dias.push({
         fecha: clave,
         completados: r.completados,
         esperados: redondear1(r.esperados),
-        porcentaje: porcentaje(r.completados, r.esperados),
+        porcentaje: porcentaje(r.completadosPonderados, r.esperados),
         completadosIds,
         aplicanIds,
       });
     }
 
-    // Solo los hábitos que tocaban o se completaron en el rango
     const habitos = datos.habitos
       .filter((h) => relevantes.has(h.id))
       .map((h) => ({
@@ -239,16 +226,14 @@ export class StatisticsService {
       habitos,
       dias,
       resumen: {
-        completados: totalCompletados,
+        completados: totalCompletados, 
         esperados: redondear1(totalEsperados),
-        porcentaje: porcentaje(totalCompletados, totalEsperados),
-        // Solo cuentan los hábitos activos: completar uno inactivo no es "actividad"
+        porcentaje: porcentaje(totalCompletadosPonderados, totalEsperados), // ponderado
         diasConActividad: dias.filter((d) => d.completados > 0).length,
       },
     };
   }
 
-  /** Seguimiento por hábito: hoy, semana, mes y rachas propias. */
   async porHabito(usuarioId: string) {
     const datos = await this.cargarDatos(usuarioId);
     const hoy = inicioDelDia(new Date());

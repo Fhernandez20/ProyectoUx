@@ -1,5 +1,4 @@
-// Se simulan @nestjs/common (evita problemas de módulos ES según la versión de
-// Node) y PrismaService (evita cargar el cliente real de Prisma).
+
 jest.mock('@nestjs/common', () => ({
   Injectable: () => () => undefined,
   BadRequestException: class BadRequestException extends Error {},
@@ -9,7 +8,7 @@ jest.mock('../prisma/prisma.service', () => ({ PrismaService: class {} }));
 import { BadRequestException } from '@nestjs/common';
 import { StatisticsService } from './statistics.service';
 
-const fecha = (dia: number, hora = 10) => new Date(2026, 8, dia, hora, 0); // septiembre 2026
+const fecha = (dia: number, hora = 10) => new Date(2026, 8, dia, hora, 0); 
 
 function habito(parcial: Record<string, unknown> = {}) {
   return {
@@ -65,7 +64,6 @@ describe('StatisticsService.seguimiento - validaciones', () => {
 });
 
 describe('StatisticsService.seguimiento - contenido', () => {
-  // A: diario desde el 1. B: diario desde el 19. C: inactivo (sin actividad).
   const habitos = [
     habito({ id: 'A', nombre: 'Leer', prioridad: 2 }),
     habito({ id: 'B', nombre: 'Correr', prioridad: 1, fechaInicio: new Date(2026, 8, 19) }),
@@ -73,7 +71,7 @@ describe('StatisticsService.seguimiento - contenido', () => {
   ];
   const registros = [
     { habitoId: 'A', fecha: fecha(18, 9) },
-    { habitoId: 'A', fecha: fecha(18, 20) }, // duplicado el mismo día
+    { habitoId: 'A', fecha: fecha(18, 20) }, 
     { habitoId: 'A', fecha: fecha(19) },
     { habitoId: 'B', fecha: fecha(19) },
   ];
@@ -84,7 +82,7 @@ describe('StatisticsService.seguimiento - contenido', () => {
     expect(r.dias.map((d) => d.fecha)).toEqual(['2026-09-17', '2026-09-18', '2026-09-19']);
     expect(r.dias[0].aplicanIds).toEqual(['A']);
     expect(r.dias[0].completadosIds).toEqual([]);
-    expect(r.dias[1].completadosIds).toEqual(['A']); // el duplicado cuenta una sola vez
+    expect(r.dias[1].completadosIds).toEqual(['A']); 
     expect(r.dias[2].aplicanIds.sort()).toEqual(['A', 'B']);
     expect(r.dias[2].completadosIds.sort()).toEqual(['A', 'B']);
   });
@@ -94,8 +92,8 @@ describe('StatisticsService.seguimiento - contenido', () => {
 
     expect(r.dias.map((d) => d.porcentaje)).toEqual([0, 100, 100]);
     expect(r.resumen).toEqual({
-      completados: 3, // A el 18, A y B el 19
-      esperados: 4, // A x3 + B x1
+      completados: 3, 
+      esperados: 4, 
       porcentaje: 75,
       diasConActividad: 2,
     });
@@ -120,7 +118,6 @@ describe('StatisticsService.seguimiento - contenido', () => {
 });
 
 describe('StatisticsService.seguimiento - hábitos inactivos', () => {
-  // A activo. C inactivo, pero con un completado el 18 y otro el 19.
   const habitos = [
     habito({ id: 'A', nombre: 'Leer' }),
     habito({ id: 'C', nombre: 'Viejo', activo: false }),
@@ -135,9 +132,9 @@ describe('StatisticsService.seguimiento - hábitos inactivos', () => {
     const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-18', '2026-09-19');
     const [d18, d19] = r.dias;
 
-    expect(d18.completadosIds).toEqual(['C']); // se ve en el historial...
-    expect(d18.completados).toBe(0); // ...pero no cuenta
-    expect(d18.aplicanIds).toEqual(['A']); // un inactivo nunca "toca"
+    expect(d18.completadosIds).toEqual(['C']); 
+    expect(d18.completados).toBe(0); 
+    expect(d18.aplicanIds).toEqual(['A']); 
 
     expect(d19.completadosIds.sort()).toEqual(['A', 'C']);
     expect(d19.completados).toBe(1); // solo A
@@ -160,5 +157,56 @@ describe('StatisticsService.seguimiento - hábitos inactivos', () => {
     const r = await crearServicio(habitos, registros).seguimiento('u1', '2026-09-18', '2026-09-19');
     expect(r.resumen.diasConActividad).toBe(1); // solo el 19; el 18 fue únicamente el inactivo
     expect(r.resumen.completados).toBe(1);
+  });
+});
+
+describe('StatisticsService - bug: % inflado por un hábito semanal sobre-completado', () => {
+  const hoyFijo = new Date(2026, 8, 21, 12, 0); 
+  const diaHace = (n: number) => new Date(2026, 8, 21 - n, 8, 0); 
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    jest.setSystemTime(hoyFijo);
+  });
+  afterEach(() => jest.useRealTimers());
+
+  const habitos = [
+    habito({ id: 'diario', nombre: 'Tomar agua', frecuencia: 'diario', fechaInicio: diaHace(30) }),
+    habito({ id: 'semanal', nombre: 'Jugar Splatoon', frecuencia: 'semanal', fechaInicio: diaHace(30) }),
+  ];
+
+  const registros: { habitoId: string; fecha: Date }[] = [];
+  for (let i = 0; i < 7; i++) {
+    if (i !== 3) registros.push({ habitoId: 'diario', fecha: diaHace(i) });
+    registros.push({ habitoId: 'semanal', fecha: diaHace(i) });
+  }
+
+  it('resumen(): el % semanal ya NO se infla a 100%', async () => {
+    const servicio = crearServicio(habitos, registros);
+    const r = await servicio.resumen('u1');
+    expect(r.cumplimiento.semana).toBe(88);
+    expect(r.cumplimiento.semana).toBeLessThan(100);
+  });
+
+  it('resumen(): "completadosHoy" sigue siendo un conteo simple (no cambia)', async () => {
+    const servicio = crearServicio(habitos, registros);
+    const r = await servicio.resumen('u1');
+    expect(r.completadosHoy).toBe(2);
+  });
+
+  it('seguimiento(): el "Cumplimiento de la semana" ya no se infla, y el conteo total no cambia', async () => {
+    const servicio = crearServicio(habitos, registros);
+    const r = await servicio.seguimiento('u1', '2026-09-15', '2026-09-21');
+    expect(r.resumen.porcentaje).toBe(88);
+    expect(r.resumen.completados).toBe(13); 
+    expect(r.resumen.diasConActividad).toBe(7); 
+  });
+
+  it('actividad(): el % de un día usa el valor ponderado, no el conteo simple', async () => {
+    const servicio = crearServicio(habitos, registros);
+    const dias = await servicio.actividad('u1', 7);
+    const diaSinDiario = dias.find((d) => d.fecha === '2026-09-18'); 
+    expect(diaSinDiario?.completados).toBe(1); 
+    expect(diaSinDiario?.porcentaje).toBe(13);
   });
 });

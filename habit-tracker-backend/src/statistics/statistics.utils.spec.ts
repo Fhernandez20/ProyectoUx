@@ -87,19 +87,40 @@ describe('evaluarDia y porcentaje', () => {
   it('2 hábitos diarios, 1 completado = 50%', () => {
     const habitos = [habito({ id: 'a' }), habito({ id: 'b' })];
     const r = evaluarDia(habitos, new Set(['a']), dia);
-    expect(r).toEqual({ completados: 1, esperados: 2 });
+    expect(r).toEqual({ completados: 1, completadosPonderados: 1, esperados: 2 });
     expect(porcentaje(r.completados, r.esperados)).toBe(50);
   });
 
   it('ignora completados de hábitos que no aplican ese día', () => {
     const habitos = [habito({ id: 'a', activo: false }), habito({ id: 'b' })];
     const r = evaluarDia(habitos, new Set(['a', 'b']), dia);
-    expect(r).toEqual({ completados: 1, esperados: 1 });
+    expect(r).toEqual({ completados: 1, completadosPonderados: 1, esperados: 1 });
   });
 
   it('un hábito semanal pesa 1/7 por día', () => {
     const r = evaluarDia([habito({ frecuencia: 'semanal' })], undefined, dia);
     expect(r.esperados).toBeCloseTo(1 / 7);
+  });
+
+  it('completadosPonderados usa el mismo peso que esperados', () => {
+    const habitos = [
+      habito({ id: 'a', frecuencia: 'diario' }),
+      habito({ id: 'b', frecuencia: 'semanal' }),
+    ];
+    const r = evaluarDia(habitos, new Set(['a', 'b']), dia);
+    expect(r.completados).toBe(2); 
+    expect(r.completadosPonderados).toBeCloseTo(1 + 1 / 7); 
+  });
+
+  it('completadosPonderados: un hábito semanal completado varias veces en la semana no debe superar su propio peso diario', () => {
+
+    const semanal = habito({ id: 'b', frecuencia: 'semanal' });
+    let suma = 0;
+    for (const d2 of [dia, new Date(2026, 8, 19), new Date(2026, 8, 20)]) {
+      suma += evaluarDia([semanal], new Set(['b']), d2).completadosPonderados;
+    }
+    expect(suma).toBeCloseTo(3 / 7);
+    expect(suma).toBeLessThan(1); 
   });
 
   it('porcentaje nunca pasa de 100 y con 0 esperados devuelve 0', () => {
