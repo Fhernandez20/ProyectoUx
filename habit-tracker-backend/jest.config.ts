@@ -18,7 +18,11 @@ const config: Config = {
     // rootDir explícito: TypeScript 6 exige definirlo, si no ts-jest falla con TS5011
     '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: { rootDir: '.' } }],
   },
-  moduleNameMapper: pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
+  moduleNameMapper: {
+    ...pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
+    // @nestjs/swagger es un módulo ES que Jest no puede cargar: en tests se usa un sustituto
+    '^@nestjs/swagger$': '<rootDir>/test/mocks/nestjs-swagger.ts',
+  },
   collectCoverageFrom: [
     'src/**/*.(t|j)s',
     'libs/**/*.(t|j)s',
