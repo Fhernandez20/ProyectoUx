@@ -11,6 +11,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
@@ -49,10 +50,21 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           <MenuIcon />
         </IconButton>
 
-        {/* Logo / marca, a la izquierda (queda alineado con el Sidebar) */}
+        {/* Logo / marca, a la izquierda (queda alineado con el Sidebar).
+            component={Link}: además de precargar el Dashboard, hace que el logo
+            sea un enlace real (accesible por teclado), no solo una caja con onClick. */}
         <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-          onClick={() => router.push('/dashboard')}
+          component={Link}
+          href="/dashboard"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            textDecoration: 'none',
+            color: 'inherit',
+            borderRadius: 1,
+            '&:focus-visible': { outline: '2px solid', outlineColor: 'cream.main', outlineOffset: 2 },
+          }}
         >
           <TrackChangesOutlinedIcon sx={{ color: 'cream.main' }} />
           <Typography
@@ -68,8 +80,9 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         {usuario && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
             <Button
+              component={Link}
+              href="/perfil"
               size="small"
-              onClick={() => router.push('/perfil')}
               aria-label="Ir a mi perfil"
               sx={{
                 display: { xs: 'none', sm: 'inline-flex' },

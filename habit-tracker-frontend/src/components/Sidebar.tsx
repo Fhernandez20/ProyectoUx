@@ -17,7 +17,8 @@ import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined';
 import BarChartIcon from '@mui/icons-material/BarChartOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlineOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const DRAWER_WIDTH = 220;
 
@@ -39,7 +40,6 @@ const paperSx = {
 
 function ListaNavegacion({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <List component="nav" aria-label="Navegación principal" sx={{ px: 1, pt: 1 }}>
@@ -48,12 +48,13 @@ function ListaNavegacion({ onNavigate }: { onNavigate?: () => void }) {
         return (
           <ListItemButton
             key={item.href}
+            component={Link}
+            href={item.href}
+            // Con <Link>, Next.js precarga la página al aparecer en pantalla:
+            // al hacer clic ya está lista, en vez de empezar a descargarla ahí.
             selected={activo}
             aria-current={activo ? 'page' : undefined}
-            onClick={() => {
-              router.push(item.href);
-              onNavigate?.();
-            }}
+            onClick={onNavigate}
             sx={{
               borderRadius: 1,
               mb: 0.5,
