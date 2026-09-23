@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
@@ -29,26 +30,43 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   return (
     <AppBar
       position="fixed"
-      color="default"
       elevation={0}
-      sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
+      sx={{
+        bgcolor: 'primary.main', // explícito: con color="primary" el fondo blanco de Paper puede ganar
+        color: 'common.white',
+        // Por encima del Sidebar: si no, el menú lateral (que tiene más
+        // prioridad por defecto en MUI) tapa el lado izquierdo de esta barra.
+        zIndex: (t) => t.zIndex.drawer + 1,
+      }}
     >
       <Toolbar>
         <IconButton
           edge="start"
           aria-label="Abrir menú de navegación"
           onClick={onMenuClick}
-          sx={{ mr: 1, display: { sm: 'none' } }}
+          sx={{ mr: 1, display: { sm: 'none' }, color: 'common.white' }}
         >
           <MenuIcon />
         </IconButton>
 
-        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 500 }}>
-          Habit Tracker
-        </Typography>
+        {/* Logo / marca, a la izquierda (queda alineado con el Sidebar) */}
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+          onClick={() => router.push('/dashboard')}
+        >
+          <TrackChangesOutlinedIcon sx={{ color: 'cream.main' }} />
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 600, color: 'common.white', letterSpacing: 0.3 }}
+          >
+            Habit Tracker
+          </Typography>
+        </Box>
+
+        <Box sx={{ flexGrow: 1 }} />
 
         {usuario && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
             <Button
               size="small"
               onClick={() => router.push('/perfil')}
@@ -56,26 +74,46 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               sx={{
                 display: { xs: 'none', sm: 'inline-flex' },
                 textTransform: 'none',
-                color: 'text.secondary',
+                color: 'rgba(255,255,255,0.85)',
                 fontWeight: 400,
                 fontSize: '0.875rem',
+                '&:hover': { color: 'common.white', bgcolor: 'rgba(255,255,255,0.08)' },
               }}
             >
               Hola, {usuario.nombre}
             </Button>
+
             <Button
+              variant="contained"
               size="small"
               onClick={handleLogout}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              startIcon={<LogoutIcon />}
+              aria-label="Cerrar sesión"
+              sx={{
+                display: { xs: 'none', sm: 'inline-flex' },
+                bgcolor: 'cream.main',
+                color: 'cream.contrastText',
+                textTransform: 'none',
+                fontWeight: 600,
+                boxShadow: 'none',
+                '&:hover': { bgcolor: 'cream.main', opacity: 0.9, boxShadow: 'none' },
+              }}
             >
               Cerrar sesión
             </Button>
+
             <IconButton
               aria-label="Cerrar sesión"
               onClick={handleLogout}
-              sx={{ display: { sm: 'none' } }}
+              sx={{
+                display: { sm: 'none' },
+                bgcolor: 'cream.main',
+                color: 'cream.contrastText',
+                '&:hover': { bgcolor: 'cream.main', opacity: 0.9 },
+              }}
+              size="small"
             >
-              <LogoutIcon />
+              <LogoutIcon fontSize="small" />
             </IconButton>
           </Box>
         )}

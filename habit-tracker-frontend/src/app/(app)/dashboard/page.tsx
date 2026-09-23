@@ -195,7 +195,10 @@ export default function DashboardPage() {
                     </Typography>
                   </Box>
                   <Button
+                    variant="contained"
                     size="small"
+                    fullWidth
+                    color="primary"
                     sx={{ mt: 1 }}
                     onClick={() => router.push('/estadisticas')}
                   >
@@ -265,7 +268,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Button variant="outlined" onClick={() => router.push('/habitos')}>
+          <Button variant="contained" color="primary" onClick={() => router.push('/habitos')}>
             Ver todos mis hábitos
           </Button>
         </>

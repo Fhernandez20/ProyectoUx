@@ -2,6 +2,18 @@
 
 import { createTheme } from '@mui/material/styles';
 
+// Le agregamos un color "cream" a la paleta de MUI, además de los que ya
+// definiste (primary, secondary, etc.), para usarlo como acento cálido sobre
+// el azul oscuro (por ejemplo, en el botón de "Cerrar sesión" de la barra).
+declare module '@mui/material/styles' {
+  interface Palette {
+    cream: Palette['primary'];
+  }
+  interface PaletteOptions {
+    cream?: PaletteOptions['primary'];
+  }
+}
+
 // Paleta definida en tu documento de UI/UX (1er avance)
 const theme = createTheme({
   palette: {
@@ -19,6 +31,10 @@ const theme = createTheme({
     },
     error: {
       main: '#DC2626', // Error
+    },
+    cream: {
+      main: '#FBEFD9', // Crema: acento cálido para resaltar sobre el azul oscuro
+      contrastText: '#1E293B',
     },
     background: {
       default: '#F9FAFB', // Fondo

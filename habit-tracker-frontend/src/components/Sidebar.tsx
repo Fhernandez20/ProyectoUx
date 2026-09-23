@@ -10,11 +10,13 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
 import ChecklistIcon from '@mui/icons-material/ChecklistOutlined';
 import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined';
 import BarChartIcon from '@mui/icons-material/BarChartOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlineOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
 import { usePathname, useRouter } from 'next/navigation';
 
 const DRAWER_WIDTH = 220;
@@ -30,6 +32,7 @@ const items = [
 const paperSx = {
   width: DRAWER_WIDTH,
   boxSizing: 'border-box',
+  bgcolor: 'background.paper', // blanco
   borderRight: 1,
   borderColor: 'divider',
 } as const;
@@ -39,7 +42,7 @@ function ListaNavegacion({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
 
   return (
-    <List component="nav" aria-label="Navegación principal" sx={{ px: 1 }}>
+    <List component="nav" aria-label="Navegación principal" sx={{ px: 1, pt: 1 }}>
       {items.map((item) => {
         const activo = pathname === item.href;
         return (
@@ -51,10 +54,27 @@ function ListaNavegacion({ onNavigate }: { onNavigate?: () => void }) {
               router.push(item.href);
               onNavigate?.();
             }}
-            sx={{ borderRadius: 1, mb: 0.5 }}
+            sx={{
+              borderRadius: 1,
+              mb: 0.5,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.hover' },
+              '&.Mui-selected': {
+                bgcolor: (t) => alpha(t.palette.secondary.main, 0.1),
+                color: 'secondary.main',
+                borderLeft: '3px solid',
+                borderLeftColor: 'secondary.main',
+                pl: '13px', // compensa el borde (16px de padding - 3px del borde)
+                '& .MuiListItemIcon-root': { color: 'secondary.main' },
+                '&:hover': { bgcolor: (t) => alpha(t.palette.secondary.main, 0.16) },
+              },
+            }}
           >
             <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
+            <ListItemText
+              primary={item.label}
+              slotProps={{ primary: { sx: { fontWeight: activo ? 600 : 400 } } }}
+            />
           </ListItemButton>
         );
       })}
@@ -76,13 +96,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         open={mobileOpen}
         onClose={onClose}
         ModalProps={{ keepMounted: true }}
-        sx={{
-          display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': paperSx,
-        }}
+        sx={{ display: { xs: 'block', sm: 'none' } }}
+        slotProps={{ paper: { sx: paperSx } }}
       >
-        <Box sx={{ px: 2, py: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 500 }}>
+        <Box sx={{ px: 2, py: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TrackChangesOutlinedIcon sx={{ color: 'secondary.main' }} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Habit Tracker
           </Typography>
         </Box>
@@ -92,12 +111,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* Escritorio / tablet: menú fijo */}
       <Drawer
         variant="permanent"
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': paperSx,
-        }}
+        sx={{ width: DRAWER_WIDTH, flexShrink: 0, display: { xs: 'none', sm: 'block' } }}
+        slotProps={{ paper: { sx: paperSx } }}
       >
         <Toolbar />
         <ListaNavegacion />

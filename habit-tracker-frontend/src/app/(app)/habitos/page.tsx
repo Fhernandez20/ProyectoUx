@@ -305,9 +305,25 @@ export default function HabitosPage() {
                     alignItems: 'flex-start',
                   }}
                 >
-                  <Typography variant="h6" style={{ fontWeight: 500 }}>
-                    {h.nombre}
-                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      flexWrap: 'wrap',
+                      pr: 1,
+                    }}
+                  >
+                    <Typography variant="h6" style={{ fontWeight: 500 }}>
+                      {h.nombre}
+                    </Typography>
+                    <Chip
+                      label={infoPrioridad(h.prioridad).label}
+                      size="small"
+                      variant="outlined"
+                      color={infoPrioridad(h.prioridad).color}
+                    />
+                  </Box>
                   <Switch
                     checked={h.activo}
                     onChange={() => toggleActivo(h)}
@@ -333,12 +349,6 @@ export default function HabitosPage() {
                   {h.categoria && (
                     <Chip label={h.categoria} size="small" variant="outlined" />
                   )}
-                  <Chip
-                    label={`Prioridad ${infoPrioridad(h.prioridad).label.toLowerCase()}`}
-                    size="small"
-                    variant="outlined"
-                    color={infoPrioridad(h.prioridad).color}
-                  />
                   {!h.activo && (
                     <Chip label="Inactivo" size="small" color="default" />
                   )}
