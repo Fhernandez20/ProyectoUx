@@ -13,17 +13,9 @@ import {
   Alert,
   LinearProgress,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   useTheme,
 } from '@mui/material';
 import { LineChart } from '@mui/x-charts/LineChart';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import RemoveIcon from '@mui/icons-material/Remove';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
@@ -36,6 +28,7 @@ import {
   ApiError,
 } from '@/lib/api';
 import { etiquetaDiaMes } from '@/lib/fechas';
+import ListaHabitosStats from '@/components/estadisticas/ListaHabitosStats';
 
 interface DatosEstadisticas {
   resumen: ResumenStats;
@@ -153,12 +146,6 @@ export default function EstadisticasPage() {
 
   const completadosMes = mes.reduce((suma, d) => suma + d.completados, 0);
 
-  // Activos primero; dentro de cada grupo, mayor racha primero
-  const habitosOrdenados = [...habitos].sort(
-    (a, b) =>
-      Number(b.activo) - Number(a.activo) || b.rachaActual - a.rachaActual,
-  );
-
   return (
     <Box>
       <Typography variant="h5" sx={{ mb: 1, fontWeight: 500 }}>
@@ -269,66 +256,23 @@ export default function EstadisticasPage() {
 
       <Card variant="outlined">
         <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
-            Seguimiento por hábito
-          </Typography>
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small" aria-label="Seguimiento por hábito">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Hábito</TableCell>
-                  <TableCell align="center">Hoy</TableCell>
-                  <TableCell align="center">Esta semana</TableCell>
-                  <TableCell align="center">Este mes</TableCell>
-                  <TableCell align="center">Racha actual</TableCell>
-                  <TableCell align="center">Mejor racha</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {habitosOrdenados.map((h) => (
-                  <TableRow
-                    key={h.id}
-                    sx={{ opacity: h.activo ? 1 : 0.55 }}
-                  >
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {h.nombre}
-                        </Typography>
-                        <Chip label={h.frecuencia} size="small" />
-                        {!h.activo && (
-                          <Chip label="Inactivo" size="small" variant="outlined" />
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="center">
-                      {h.completadoHoy ? (
-                        <CheckCircleIcon
-                          color="success"
-                          fontSize="small"
-                          aria-label="Completado hoy"
-                        />
-                      ) : (
-                        <RemoveIcon
-                          fontSize="small"
-                          sx={{ color: 'text.disabled' }}
-                          aria-label="Pendiente"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell align="center">{h.completadosSemana} / 7</TableCell>
-                    <TableCell align="center">{h.completadosMes} / 30</TableCell>
-                    <TableCell align="center">
-                      {h.rachaActual} {h.rachaActual === 1 ? 'día' : 'días'}
-                    </TableCell>
-                    <TableCell align="center">
-                      {h.mejorRacha} {h.mejorRacha === 1 ? 'día' : 'días'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+              Seguimiento por hábito
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Últimos 7 días
+            </Typography>
+          </Box>
+          <ListaHabitosStats habitos={habitos} />
         </CardContent>
       </Card>
     </Box>
