@@ -1,4 +1,3 @@
-
 jest.mock('@nestjs/common', () => ({
   Injectable: () => () => undefined,
   BadRequestException: class BadRequestException extends Error {},
@@ -208,5 +207,51 @@ describe('StatisticsService - bug: % inflado por un hábito semanal sobre-comple
     const diaSinDiario = dias.find((d) => d.fecha === '2026-09-18'); 
     expect(diaSinDiario?.completados).toBe(1); 
     expect(diaSinDiario?.porcentaje).toBe(13);
+  });
+});
+describe('StatisticsService.tendencia - semanas sin hábitos', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 23, 12, 0));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('marca conHabitos: false en las semanas anteriores al primer hábito', async () => {
+    const s = crearServicio([habito({ fechaInicio: new Date(2026, 8, 10) })], []);
+    const r = await s.tendencia('u1', 4);
+    expect(r).toHaveLength(4);
+    expect(r.map((x) => x.conHabitos)).toEqual([false, false, true, true]);
+  });
+
+  it('una semana con hábitos pero sin completar nada sigue contando (0%, conHabitos: true)', async () => {
+    const s = crearServicio([habito({ fechaInicio: new Date(2026, 8, 1) })], []);
+    const r = await s.tendencia('u1', 2);
+    expect(r.every((x) => x.conHabitos && x.porcentaje === 0)).toBe(true);
+  });
+});
+
+describe('StatisticsService.resumen - activos, finalizados e inactivos', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 23, 12, 0));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('cada hábito cae en un solo grupo y los tres suman el total', async () => {
+    const s = crearServicio(
+      [
+        habito({ id: 'A' }), 
+        habito({ id: 'B', fechaFin: new Date(2026, 8, 20) }), 
+        habito({ id: 'C', activo: false, fechaFin: new Date(2026, 8, 18) }), 
+        habito({ id: 'D', activo: false }), // inactivo
+        habito({ id: 'E', fechaFin: new Date(2026, 8, 23) }), 
+      ],
+      [],
+    );
+    const r = await s.resumen('u1');
+    expect(r.habitosActivos).toBe(2);
+    expect(r.habitosFinalizados).toBe(2);
+    expect(r.habitosInactivos).toBe(1);
+    expect(r.habitosActivos + r.habitosFinalizados + r.habitosInactivos).toBe(r.totalHabitos);
   });
 });

@@ -1,10 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  EstadoHabito,
   HabitoBase,
   aplicaEnDia,
   calcularRachas,
   claveDia,
+  estadoHabito,
   evaluarDia,
   fechaDesdeClave,
   inicioDelDia,
@@ -49,8 +51,8 @@ export class StatisticsService {
     return { habitos, porDia, porHabito };
   }
 
-  private cumplimientoEnRango(datos: Datos, hasta: Date, dias: number): number {
-    let completados = 0; 
+  private totalesEnRango(datos: Datos, hasta: Date, dias: number) {
+    let completados = 0;
     let esperados = 0;
     for (let i = 0; i < dias; i++) {
       const dia = sumarDias(hasta, -i);
@@ -58,6 +60,11 @@ export class StatisticsService {
       completados += r.completadosPonderados;
       esperados += r.esperados;
     }
+    return { completados, esperados };
+  }
+
+  private cumplimientoEnRango(datos: Datos, hasta: Date, dias: number): number {
+    const { completados, esperados } = this.totalesEnRango(datos, hasta, dias);
     return porcentaje(completados, esperados);
   }
 
@@ -67,19 +74,19 @@ export class StatisticsService {
 
     const rachas = calcularRachas(new Set(datos.porDia.keys()), hoy);
     const hoyEval = evaluarDia(datos.habitos, datos.porDia.get(claveDia(hoy)), hoy);
+    const contarEstado = (estado: EstadoHabito) =>
+      datos.habitos.filter((h) => estadoHabito(h, hoy) === estado).length;
 
     return {
       totalHabitos: datos.habitos.length,
-      habitosActivos: datos.habitos.filter((h) => h.activo).length,
-      habitosFinalizados: datos.habitos.filter(
-        (h) => h.fechaFin && inicioDelDia(h.fechaFin) < hoy,
-      ).length,
-      completadosHoy: hoyEval.completados, // conteo simple: "X de Y hábitos"
+      habitosActivos: contarEstado('activo'),
+      habitosFinalizados: contarEstado('finalizado'),
+      habitosInactivos: contarEstado('inactivo'),
+      completadosHoy: hoyEval.completados, 
       esperadosHoy: redondear1(hoyEval.esperados),
       rachaActual: rachas.actual,
       mejorRacha: rachas.mejor,
       cumplimiento: {
-        // porcentaje: siempre con el valor ponderado (ver evaluarDia)
         hoy: porcentaje(hoyEval.completadosPonderados, hoyEval.esperados),
         semana: this.cumplimientoEnRango(datos, hoy, 7),
         mes: this.cumplimientoEnRango(datos, hoy, 30),
@@ -105,9 +112,9 @@ export class StatisticsService {
       const r = evaluarDia(datos.habitos, datos.porDia.get(clave), dia);
       resultado.push({
         fecha: clave,
-        completados: r.completados, // conteo simple, para la gráfica de barras
+        completados: r.completados, 
         esperados: redondear1(r.esperados),
-        porcentaje: porcentaje(r.completadosPonderados, r.esperados), // ponderado
+        porcentaje: porcentaje(r.completadosPonderados, r.esperados), 
       });
     }
     return resultado;
@@ -122,15 +129,18 @@ export class StatisticsService {
       desde: string;
       hasta: string;
       porcentaje: number;
+      conHabitos: boolean;
     }[] = [];
 
     for (let i = n - 1; i >= 0; i--) {
       const hasta = sumarDias(hoy, -7 * i);
       const desde = sumarDias(hasta, -6);
+      const { completados, esperados } = this.totalesEnRango(datos, hasta, 7);
       resultado.push({
         desde: claveDia(desde),
         hasta: claveDia(hasta),
-        porcentaje: this.cumplimientoEnRango(datos, hasta, 7),
+        porcentaje: porcentaje(completados, esperados),
+        conHabitos: esperados > 0,
       });
     }
     return resultado;
@@ -228,7 +238,7 @@ export class StatisticsService {
       resumen: {
         completados: totalCompletados, 
         esperados: redondear1(totalEsperados),
-        porcentaje: porcentaje(totalCompletadosPonderados, totalEsperados), // ponderado
+        porcentaje: porcentaje(totalCompletadosPonderados, totalEsperados), 
         diasConActividad: dias.filter((d) => d.completados > 0).length,
       },
     };

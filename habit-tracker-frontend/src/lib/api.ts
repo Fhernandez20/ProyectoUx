@@ -28,12 +28,10 @@ async function request<T>(
     },
   });
 
-  // Token vencido o inválido en medio de la sesión: se limpia y se vuelve al login.
-  // (En login/registro un 401 significa "credenciales incorrectas", no sesión vencida.)
   if (res.status === 401 && token && !path.startsWith('/auth/')) {
     sessionStorage.removeItem('access_token');
     window.location.assign('/login');
-    return new Promise<T>(() => {}); // la página se recarga; no se sigue procesando
+    return new Promise<T>(() => {}); 
   }
 
   if (!res.ok) {
@@ -53,7 +51,6 @@ async function request<T>(
   return res.json();
 }
 
-// ----- Tipos -----
 export interface Usuario {
   id?: string;
   userId?: string;
@@ -86,11 +83,10 @@ export interface HabitoInput {
   categoria?: string;
   frecuencia: 'diario' | 'semanal' | 'personalizada';
   prioridad?: number;
-  fechaInicio?: string; // "YYYY-MM-DDT12:00:00.000Z"
-  fechaFin?: string | null; // null = quitar la fecha de fin
+  fechaInicio?: string; 
+  fechaFin?: string | null; 
 }
 
-// ----- Auth -----
 export const authApi = {
   register: (data: { nombre: string; correo: string; contrasena: string }) =>
     request<AuthResponse>('/auth/register', {
@@ -107,9 +103,7 @@ export const authApi = {
   me: () => request<Usuario>('/auth/me'),
 };
 
-// ----- Users -----
 export const usersApi = {
-  // Datos frescos desde la base de datos (el token puede tener un nombre viejo)
   me: () => request<Usuario>('/users/me'),
 
   actualizar: (data: { nombre: string }) =>
@@ -119,7 +113,6 @@ export const usersApi = {
     }),
 };
 
-// ----- Habits -----
 export const habitsApi = {
   listar: () => request<Habito[]>('/habits'),
 
@@ -144,15 +137,14 @@ export const habitsApi = {
   completar: (id: string) =>
     request(`/habits/${id}/completar`, { method: 'POST' }),
 
-  // IDs de los hábitos que el usuario ya completó hoy
   completadosHoy: () => request<string[]>('/habits/completados-hoy'),
 };
 
-// ----- Statistics -----
 export interface ResumenStats {
   totalHabitos: number;
   habitosActivos: number;
   habitosFinalizados: number;
+  habitosInactivos: number;
   completadosHoy: number;
   esperadosHoy: number;
   rachaActual: number;
@@ -171,6 +163,7 @@ export interface SemanaTendencia {
   desde: string;
   hasta: string;
   porcentaje: number;
+  conHabitos: boolean;
 }
 
 export interface HabitoStats {
@@ -194,12 +187,12 @@ export interface HabitoSeguimiento {
 }
 
 export interface DiaSeguimiento {
-  fecha: string; // "2026-09-18"
+  fecha: string; 
   completados: number;
   esperados: number;
   porcentaje: number;
-  completadosIds: string[]; // hábitos completados ese día
-  aplicanIds: string[]; // hábitos que tocaban ese día
+  completadosIds: string[]; 
+  aplicanIds: string[]; 
 }
 
 export interface Seguimiento {
@@ -222,7 +215,6 @@ export const statsApi = {
   tendencia: (semanas: number) =>
     request<SemanaTendencia[]>(`/statistics/tendencia?semanas=${semanas}`),
   porHabito: () => request<HabitoStats[]>('/statistics/habitos'),
-  // Rango máximo: 62 días. Fechas en formato "AAAA-MM-DD".
   seguimiento: (desde: string, hasta: string) =>
     request<Seguimiento>(`/statistics/seguimiento?desde=${desde}&hasta=${hasta}`),
 };

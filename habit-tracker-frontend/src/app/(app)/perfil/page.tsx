@@ -178,8 +178,8 @@ export default function PerfilPage() {
                 }}
               >
                 <Dato label="Total de hábitos" valor={resumen.totalHabitos} />
-                <Dato label="Racha actual" valor={`${resumen.rachaActual} d`} />
-                <Dato label="Mejor racha" valor={`${resumen.mejorRacha} d`} />
+                <Dato label="Racha actual" valor={`${resumen.rachaActual} ${resumen.rachaActual === 1 ? 'día' : 'días'}`} />
+                <Dato label="Mejor racha" valor={`${resumen.mejorRacha} ${resumen.mejorRacha === 1 ? 'día' : 'días'}`} />
               </Box>
             </CardContent>
           </Card>

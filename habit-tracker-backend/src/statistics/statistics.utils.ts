@@ -1,4 +1,3 @@
-
 export interface HabitoBase {
   id: string;
   nombre: string;
@@ -63,6 +62,15 @@ export function calcularRachas(
   }
 
   return { actual, mejor };
+}
+
+export type EstadoHabito = 'activo' | 'finalizado' | 'inactivo';
+
+export function estadoHabito(habito: HabitoBase, hoy: Date): EstadoHabito {
+  if (habito.fechaFin && inicioDelDia(habito.fechaFin) < inicioDelDia(hoy)) {
+    return 'finalizado';
+  }
+  return habito.activo ? 'activo' : 'inactivo';
 }
 
 export function aplicaEnDia(habito: HabitoBase, dia: Date): boolean {
