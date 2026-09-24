@@ -266,6 +266,50 @@ describe('StatisticsService - bug: % inflado por un hábito semanal sobre-comple
     expect(diaSinDiario?.porcentaje).toBe(13);
   });
 });
+
+describe('StatisticsService.actividad - hábitos que tocaban cada día', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 24, 12, 0));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('aplicables cuenta los hábitos vigentes ese día, incluidos los de rango y los semanales', async () => {
+    const s = crearServicio(
+      [
+        habito({ id: 'agua', fechaInicio: new Date(2026, 8, 6) }),
+        habito({
+          id: 'teo',
+          fechaInicio: new Date(2026, 8, 20),
+          fechaFin: new Date(2026, 8, 20),
+        }),
+        habito({
+          id: 'tareas',
+          fechaInicio: new Date(2026, 8, 20),
+          fechaFin: new Date(2026, 8, 21),
+        }),
+        habito({
+          id: 'iglesia',
+          frecuencia: 'semanal',
+          fechaInicio: new Date(2026, 8, 24),
+        }),
+      ],
+      [
+        { habitoId: 'agua', fecha: new Date(2026, 8, 20, 9) },
+        { habitoId: 'teo', fecha: new Date(2026, 8, 20, 10) },
+      ],
+    );
+    const dias = await s.actividad('u1', 7);
+    const porFecha = Object.fromEntries(dias.map((d) => [d.fecha, d]));
+    expect(porFecha['2026-09-20']).toMatchObject({
+      completados: 2,
+      aplicables: 3,
+    });
+    expect(porFecha['2026-09-21'].aplicables).toBe(2);
+    expect(porFecha['2026-09-22'].aplicables).toBe(1);
+    expect(porFecha['2026-09-24'].aplicables).toBe(2);
+  });
+});
 describe('StatisticsService.tendencia - semanas sin hábitos', () => {
   beforeEach(() => {
     jest.useFakeTimers();

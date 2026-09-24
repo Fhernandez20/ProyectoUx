@@ -110,6 +110,7 @@ export class StatisticsService {
     const resultado: {
       fecha: string;
       completados: number;
+      aplicables: number;
       esperados: number;
       porcentaje: number;
     }[] = [];
@@ -121,6 +122,7 @@ export class StatisticsService {
       resultado.push({
         fecha: clave,
         completados: r.completados,
+        aplicables: datos.habitos.filter((h) => aplicaEnDia(h, dia)).length,
         esperados: redondear1(r.esperados),
         porcentaje: porcentaje(r.completadosPonderados, r.esperados),
       });

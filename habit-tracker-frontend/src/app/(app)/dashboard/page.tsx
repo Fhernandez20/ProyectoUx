@@ -215,7 +215,7 @@ export default function DashboardPage() {
                     Actividad semanal
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Hábitos completados por día (últimos 7 días)
+                    Completados de los hábitos que tocaban cada día (últimos 7 días)
                   </Typography>
                   <BarChart
                     height={260}
@@ -230,7 +230,16 @@ export default function DashboardPage() {
                       {
                         data: semana.map((d) => d.completados),
                         label: 'Completados',
+                        stack: 'dia',
                         color: theme.palette.success.main,
+                      },
+                      {
+                        data: semana.map((d) =>
+                          Math.max(0, (d.aplicables ?? d.completados) - d.completados),
+                        ),
+                        label: 'Pendientes',
+                        stack: 'dia',
+                        color: theme.palette.grey[300],
                       },
                     ]}
                   />

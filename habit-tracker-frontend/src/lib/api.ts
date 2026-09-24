@@ -159,6 +159,7 @@ export interface ResumenStats {
 export interface ActividadDia {
   fecha: string;
   completados: number;
+  aplicables: number;
   esperados: number;
   porcentaje: number;
 }
