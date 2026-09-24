@@ -7,12 +7,21 @@ Proyecto individual. El repositorio tiene dos aplicaciones separadas: un **backe
 ## Funcionalidades
 
 - **Cuenta de usuario:** registro, inicio y cierre de sesión con JWT. Las rutas de la app están protegidas.
-- **Gestión de hábitos:** crear, editar, eliminar, activar y desactivar hábitos. Cada hábito tiene nombre, descripción, categoría, frecuencia (diaria, semanal o personalizada), prioridad, fecha de inicio y fecha de fin opcional. La lista se puede buscar, filtrar por estado y categoría y ordenar.
-- **Seguimiento:** marcar hábitos como completados y revisar el historial en vista diaria, semanal y mensual.
-- **Dashboard:** hábitos activos, completados hoy, racha actual, mejor racha, porcentaje de cumplimiento y gráficas semanal y mensual.
-- **Estadísticas:** total de hábitos, activos, finalizados, racha actual, progreso de los últimos 30 días, tendencia semanal y el avance de cada hábito en los últimos 7 días.
-- **Perfil:** datos del usuario, edición del nombre, actividad personal y logros desbloqueables.
+- **Gestión de hábitos:** crear, editar, eliminar, activar y desactivar hábitos. Cada hábito tiene nombre, descripción, categoría, frecuencia (diaria, semanal o personalizada), prioridad, fecha de inicio y fecha de fin opcional. La lista se puede buscar, filtrar por estado y categoría y ordenar; por defecto muestra los hábitos activos, del más reciente al más antiguo. Desde cada hábito se marca el completado de hoy, y se puede desmarcar si se marcó por accidente.
+- **Seguimiento:** historial de completados en vista diaria, semanal y mensual, con un calendario que muestra cuántos hábitos se completaron cada día de los que tocaban.
+- **Dashboard:** hábitos activos, completados hoy, racha actual, mejor racha, porcentaje de cumplimiento, una gráfica de los últimos 7 días (completados contra los hábitos que tocaban cada día) y otra del último mes.
+- **Estadísticas:** total de hábitos, activos, finalizados, racha actual, progreso de los últimos 30 días, tendencia semanal comparada con la semana anterior y el avance de cada hábito desde que empezó. Los hábitos finalizados se muestran aparte, medidos contra todo su periodo.
+- **Perfil:** datos del usuario, edición del nombre, actividad personal (días en la app, veces completadas y hábito más constante) y logros desbloqueables.
+- **Navegación adaptable:** menú lateral en escritorio, barra de navegación inferior en celular y menú de cuenta en el avatar de la barra superior.
 - **Validaciones y errores:** formularios validados en el frontend (Zod) y en el backend (class-validator), con mensajes claros para el usuario.
+
+### Cómo se calculan las métricas
+
+- **Estado de un hábito:** cada hábito está en un solo estado. Es *finalizado* si su fecha de fin ya pasó; si no, es *activo* o *inactivo* según su interruptor. Por eso activos, finalizados e inactivos siempre suman el total.
+- **Cumplimiento:** completados divididos entre los días en que el hábito tocaba. Un hábito semanal se cuenta como una vez por semana, y los días anteriores a la fecha de inicio o posteriores a la de fin no cuentan.
+- **Avance por hábito:** se mide desde su fecha de inicio hasta hoy, o hasta su fecha de fin si ya terminó. Un hábito nuevo no sale castigado por los días en que todavía no existía.
+- **Rachas:** la racha general cuenta los días seguidos en que se completó al menos un hábito. La racha de cada hábito se cuenta en días, salvo en los semanales, donde se cuenta en semanas seguidas.
+- **Logros:** se calculan en el momento con los datos existentes (hábitos creados, mejor racha, veces completadas y semanas al 100%); no se guardan en la base de datos.
 
 ## Tecnologías
 
@@ -66,7 +75,7 @@ Un usuario tiene muchos hábitos, y cada hábito tiene un registro por cada día
 
 ### Frontend
 
-Usa el App Router de Next.js. Las páginas de la app viven dentro de `src/app/(app)`, que comparte la barra superior, el menú lateral y la protección de sesión.
+Usa el App Router de Next.js. Las páginas de la app viven dentro de `src/app/(app)`, que comparte la barra superior, el menú lateral, la barra inferior de celular y la protección de sesión.
 
 | Carpeta | Contenido |
 | --- | --- |
@@ -76,7 +85,7 @@ Usa el App Router de Next.js. Las páginas de la app viven dentro de `src/app/(a
 | `src/app/(app)/seguimiento` | Seguimiento diario, semanal y mensual |
 | `src/app/(app)/estadisticas` | Estadísticas |
 | `src/app/(app)/perfil` | Perfil |
-| `src/components` | Componentes reutilizables (navegación, formularios, vistas de seguimiento, logros) |
+| `src/components` | Componentes reutilizables: barra superior, menú lateral, barra inferior para celular, formulario de hábitos, vistas de seguimiento, lista de avance por hábito y logros |
 | `src/lib` | Cliente de la API, esquemas de validación, tema de colores, sesión y utilidades de fechas |
 
 ## Requisitos
@@ -184,41 +193,15 @@ Para probar las rutas protegidas, usa `POST /auth/login`, copia el token y péga
 | PATCH | `/habits/:id` | Editar un hábito |
 | PATCH | `/habits/:id/toggle` | Activar o desactivar |
 | POST | `/habits/:id/completar` | Marcar un hábito como completado hoy |
+| DELETE | `/habits/:id/completar` | Desmarcar el completado de hoy |
 | GET | `/habits/:id/registros` | Historial de un hábito |
 | DELETE | `/habits/:id` | Eliminar un hábito |
-| GET | `/statistics/resumen` | Totales, rachas y porcentajes |
-| GET | `/statistics/actividad` | Actividad por día |
-| GET | `/statistics/tendencia` | Porcentaje por semana |
+| GET | `/statistics/resumen` | Totales por estado, rachas, porcentajes y veces completadas |
+| GET | `/statistics/actividad` | Completados y hábitos que tocaban cada día |
+| GET | `/statistics/tendencia` | Porcentaje por semana (bloques de 7 días hasta hoy) |
 | GET | `/statistics/seguimiento` | Datos para las vistas de seguimiento |
-| GET | `/statistics/habitos` | Avance de cada hábito |
+| GET | `/statistics/habitos` | Avance de cada hábito desde su inicio, rachas y periodo |
 
-## Pruebas y calidad del código
-
-Desde `habit-tracker-backend`:
-
-```bash
-npm test        # pruebas unitarias con Jest
-npm run lint    # revisión de código con oxlint
-```
-
-Desde `habit-tracker-frontend`:
-
-```bash
-npm run lint    # revisión de código con ESLint
-npm run build   # compilación de producción
-```
-
-## Datos de demostración (opcional)
-
-Para que el dashboard y las estadísticas tengan actividad al hacer una demo, el backend incluye un script que agrega registros de completado de los últimos días a una cuenta existente. No borra ni modifica hábitos.
-
-```bash
-cd habit-tracker-backend
-npx ts-node scripts/seed-demo.ts tu-correo@ejemplo.com
-npx ts-node scripts/seed-demo.ts tu-correo@ejemplo.com 45
-```
-
-El segundo comando agrega 45 días en lugar de los 30 predeterminados.
 
 ## Autor
 
