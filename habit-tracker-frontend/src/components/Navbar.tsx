@@ -1,58 +1,60 @@
 'use client';
 
+import { useState } from 'react';
 import {
   AppBar,
-  Toolbar,
-  Typography,
-  Button,
+  Avatar,
   Box,
+  Divider,
   IconButton,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Tooltip,
+  Typography,
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import PersonIcon from '@mui/icons-material/PersonOutlineOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
-interface NavbarProps {
-  onMenuClick: () => void;
-}
-
-export default function Navbar({ onMenuClick }: NavbarProps) {
+export default function Navbar() {
   const { usuario, logout } = useAuth();
   const router = useRouter();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const abierto = Boolean(anchor);
+
+  function cerrarMenu() {
+    setAnchor(null);
+  }
+
+  function irAPerfil() {
+    cerrarMenu();
+    router.push('/perfil');
+  }
 
   function handleLogout() {
+    cerrarMenu();
     logout();
     router.push('/login');
   }
+
+  const inicial = usuario?.nombre.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <AppBar
       position="fixed"
       elevation={0}
       sx={{
-        bgcolor: 'primary.main', // explícito: con color="primary" el fondo blanco de Paper puede ganar
+        bgcolor: 'primary.main',
         color: 'common.white',
-        // Por encima del Sidebar: si no, el menú lateral (que tiene más
-        // prioridad por defecto en MUI) tapa el lado izquierdo de esta barra.
         zIndex: (t) => t.zIndex.drawer + 1,
       }}
     >
       <Toolbar>
-        <IconButton
-          edge="start"
-          aria-label="Abrir menú de navegación"
-          onClick={onMenuClick}
-          sx={{ mr: 1, display: { sm: 'none' }, color: 'common.white' }}
-        >
-          <MenuIcon />
-        </IconButton>
-
-        {/* Logo / marca, a la izquierda (queda alineado con el Sidebar).
-            component={Link}: además de precargar el Dashboard, hace que el logo
-            sea un enlace real (accesible por teclado), no solo una caja con onClick. */}
         <Box
           component={Link}
           href="/dashboard"
@@ -67,10 +69,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           }}
         >
           <TrackChangesOutlinedIcon sx={{ color: 'cream.main' }} />
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 600, color: 'common.white', letterSpacing: 0.3 }}
-          >
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'common.white', letterSpacing: 0.3 }}>
             Habit Tracker
           </Typography>
         </Box>
@@ -78,57 +77,66 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         <Box sx={{ flexGrow: 1 }} />
 
         {usuario && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-            <Button
-              component={Link}
-              href="/perfil"
-              size="small"
-              aria-label="Ir a mi perfil"
-              sx={{
-                display: { xs: 'none', sm: 'inline-flex' },
-                textTransform: 'none',
-                color: 'rgba(255,255,255,0.85)',
-                fontWeight: 400,
-                fontSize: '0.875rem',
-                '&:hover': { color: 'common.white', bgcolor: 'rgba(255,255,255,0.08)' },
-              }}
-            >
-              Hola, {usuario.nombre}
-            </Button>
+          <>
+            <Tooltip title="Tu cuenta">
+              <IconButton
+                onClick={(e) => setAnchor(e.currentTarget)}
+                aria-label={`Menú de la cuenta de ${usuario.nombre}`}
+                aria-controls={abierto ? 'menu-cuenta' : undefined}
+                aria-haspopup="true"
+                aria-expanded={abierto ? 'true' : undefined}
+                sx={{
+                  p: 0.5,
+                  '&:focus-visible': { outline: '2px solid', outlineColor: 'cream.main' },
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    bgcolor: 'secondary.main',
+                    color: 'common.white',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {inicial}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
 
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleLogout}
-              startIcon={<LogoutIcon />}
-              aria-label="Cerrar sesión"
-              sx={{
-                display: { xs: 'none', sm: 'inline-flex' },
-                bgcolor: 'cream.main',
-                color: 'cream.contrastText',
-                textTransform: 'none',
-                fontWeight: 600,
-                boxShadow: 'none',
-                '&:hover': { bgcolor: 'cream.main', opacity: 0.9, boxShadow: 'none' },
-              }}
+            <Menu
+              id="menu-cuenta"
+              anchorEl={anchor}
+              open={abierto}
+              onClose={cerrarMenu}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { mt: 1, minWidth: 220 } } }}
             >
-              Cerrar sesión
-            </Button>
-
-            <IconButton
-              aria-label="Cerrar sesión"
-              onClick={handleLogout}
-              sx={{
-                display: { sm: 'none' },
-                bgcolor: 'cream.main',
-                color: 'cream.contrastText',
-                '&:hover': { bgcolor: 'cream.main', opacity: 0.9 },
-              }}
-              size="small"
-            >
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Box>
+              <Box sx={{ px: 2, py: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                  {usuario.nombre}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap component="p">
+                  {usuario.correo}
+                </Typography>
+              </Box>
+              <Divider />
+              <MenuItem onClick={irAPerfil}>
+                <ListItemIcon>
+                  <PersonIcon fontSize="small" />
+                </ListItemIcon>
+                Mi perfil
+              </MenuItem>
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                Cerrar sesión
+              </MenuItem>
+            </Menu>
+          </>
         )}
       </Toolbar>
     </AppBar>

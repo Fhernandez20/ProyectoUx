@@ -2,9 +2,6 @@
 
 import { createTheme } from '@mui/material/styles';
 
-// Le agregamos un color "cream" a la paleta de MUI, además de los que ya
-// definiste (primary, secondary, etc.), para usarlo como acento cálido sobre
-// el azul oscuro (por ejemplo, en el botón de "Cerrar sesión" de la barra).
 declare module '@mui/material/styles' {
   interface Palette {
     cream: Palette['primary'];
@@ -14,43 +11,53 @@ declare module '@mui/material/styles' {
   }
 }
 
-// Paleta definida en tu documento de UI/UX (1er avance)
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1E293B', // Primario
+      main: '#1E293B',
     },
     secondary: {
-      main: '#4F46E5', // Acento
+      main: '#4F46E5',
     },
     success: {
-      main: '#16A34A', // Éxito
+      main: '#16A34A',
     },
     warning: {
-      main: '#F59E0B', // Advertencia
+      main: '#F59E0B',
     },
     error: {
-      main: '#DC2626', // Error
+      main: '#DC2626',
     },
     cream: {
-      main: '#FBEFD9', // Crema: acento cálido para resaltar sobre el azul oscuro
+      main: '#FBEFD9',
       contrastText: '#1E293B',
     },
     background: {
-      default: '#F9FAFB', // Fondo
-      paper: '#FFFFFF', // Superficie
+      default: '#F9FAFB',
+      paper: '#FFFFFF',
     },
     text: {
-      primary: '#111827', // Texto primario
-      secondary: '#6B7280', // Texto secundario
+      primary: '#111827',
+      secondary: '#6B7280',
     },
-    divider: '#E5E7EB', // Borde
+    divider: '#E5E7EB',
   },
   typography: {
     fontFamily: 'Roboto, Arial, sans-serif',
   },
   shape: {
     borderRadius: 8,
+  },
+  components: {
+    MuiSnackbar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            bottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 8px)',
+          },
+        }),
+      },
+    },
   },
 });
 
