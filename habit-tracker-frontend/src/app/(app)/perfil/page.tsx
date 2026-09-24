@@ -19,8 +19,11 @@ import {
   statsApi,
   Usuario,
   ResumenStats,
+  SemanaTendencia,
+  HabitoStats,
   ApiError,
 } from '@/lib/api';
+import Logros from '@/components/perfil/Logros';
 import { useAuth } from '@/lib/auth-context';
 import { perfilSchema, primerError } from '@/lib/schemas';
 
@@ -42,23 +45,58 @@ function fechaLarga(iso?: string): string {
   });
 }
 
-function Dato({ label, valor }: { label: string; valor: string | number }) {
+function Dato({
+  label,
+  valor,
+  detalle,
+}: {
+  label: string;
+  valor: string | number;
+  detalle?: string;
+}) {
   return (
-    <Box>
+    <Box sx={{ minWidth: 0 }}>
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="h5" style={{ fontWeight: 500 }}>
+      <Typography variant="h5" style={{ fontWeight: 500 }} noWrap>
         {valor}
       </Typography>
+      {detalle && (
+        <Typography variant="caption" color="text.secondary">
+          {detalle}
+        </Typography>
+      )}
     </Box>
   );
 }
+
+function diasDesde(iso?: string): number {
+  if (!iso) return 0;
+  const inicio = new Date(iso);
+  inicio.setHours(0, 0, 0, 0);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return Math.max(1, Math.round((hoy.getTime() - inicio.getTime()) / 86_400_000) + 1);
+}
+
+function masConstante(habitos: HabitoStats[]): HabitoStats | null {
+  const conRacha = habitos.filter((h) => h.mejorRacha > 0);
+  if (conRacha.length === 0) return null;
+  return [...conRacha].sort(
+    (a, b) => b.mejorRacha - a.mejorRacha || b.completadosMes - a.completadosMes,
+  )[0];
+}
+
+const plural = (n: number, uno: string, varios: string) =>
+  `${n} ${n === 1 ? uno : varios}`;
 
 export default function PerfilPage() {
   const { actualizarUsuario } = useAuth();
   const [perfil, setPerfil] = useState<Usuario | null>(null);
   const [resumen, setResumen] = useState<ResumenStats | null>(null);
+  const [tendencia, setTendencia] = useState<SemanaTendencia[]>([]);
+  const [habitos, setHabitos] = useState<HabitoStats[]>([]);
   const [cargaError, setCargaError] = useState<string | null>(null);
 
   const [nombre, setNombre] = useState('');
@@ -67,11 +105,18 @@ export default function PerfilPage() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([usersApi.me(), statsApi.resumen()])
-      .then(([u, r]) => {
+    Promise.all([
+      usersApi.me(),
+      statsApi.resumen(),
+      statsApi.tendencia(12),
+      statsApi.porHabito(),
+    ])
+      .then(([u, r, t, h]) => {
         setPerfil(u);
         setNombre(u.nombre);
         setResumen(r);
+        setTendencia(t);
+        setHabitos(h);
       })
       .catch((err) =>
         setCargaError(
@@ -93,6 +138,10 @@ export default function PerfilPage() {
   }
 
   const sinCambios = nombre.trim() === perfil.nombre;
+  const constante = masConstante(habitos);
+  const semanaPerfecta = tendencia.some(
+    (t) => t.conHabitos !== false && t.porcentaje >= 100,
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -109,7 +158,7 @@ export default function PerfilPage() {
       const actualizado = await usersApi.actualizar({ nombre: nombre.trim() });
       setPerfil(actualizado);
       setNombre(actualizado.nombre);
-      actualizarUsuario(actualizado); // refresca "Hola, ..." en la Navbar
+      actualizarUsuario(actualizado);
       setSnackbar('Perfil actualizado');
     } catch (err) {
       setErrorForm(
@@ -161,6 +210,17 @@ export default function PerfilPage() {
               </Typography>
             </CardContent>
           </Card>
+
+          <Box sx={{ mt: 2 }}>
+            <Logros
+              datos={{
+                totalHabitos: resumen.totalHabitos,
+                mejorRacha: resumen.mejorRacha,
+                totalCompletados: resumen.totalCompletados,
+                semanaPerfecta,
+              }}
+            />
+          </Box>
         </Grid>
 
         <Grid size={{ xs: 12, md: 7 }}>
@@ -171,15 +231,29 @@ export default function PerfilPage() {
               </Typography>
               <Box
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
-                <Dato label="Total de hábitos" valor={resumen.totalHabitos} />
-                <Dato label="Racha actual" valor={`${resumen.rachaActual} ${resumen.rachaActual === 1 ? 'día' : 'días'}`} />
-                <Dato label="Mejor racha" valor={`${resumen.mejorRacha} ${resumen.mejorRacha === 1 ? 'día' : 'días'}`} />
+                <Dato
+                  label="Días en la app"
+                  valor={diasDesde(perfil.fechaRegistro)}
+                />
+                <Dato
+                  label="Veces completadas"
+                  valor={resumen.totalCompletados}
+                  detalle="Desde que empezaste"
+                />
+                <Dato
+                  label="Tu hábito más constante"
+                  valor={constante ? constante.nombre : 'Aún ninguno'}
+                  detalle={
+                    constante
+                      ? `Mejor racha: ${plural(constante.mejorRacha, 'día', 'días')}`
+                      : 'Completa un hábito para verlo aquí'
+                  }
+                />
               </Box>
             </CardContent>
           </Card>

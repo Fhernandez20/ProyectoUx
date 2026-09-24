@@ -31,7 +31,7 @@ async function request<T>(
   if (res.status === 401 && token && !path.startsWith('/auth/')) {
     sessionStorage.removeItem('access_token');
     window.location.assign('/login');
-    return new Promise<T>(() => {}); 
+    return new Promise<T>(() => {});
   }
 
   if (!res.ok) {
@@ -83,8 +83,8 @@ export interface HabitoInput {
   categoria?: string;
   frecuencia: 'diario' | 'semanal' | 'personalizada';
   prioridad?: number;
-  fechaInicio?: string; 
-  fechaFin?: string | null; 
+  fechaInicio?: string;
+  fechaFin?: string | null;
 }
 
 export const authApi = {
@@ -145,6 +145,7 @@ export interface ResumenStats {
   habitosActivos: number;
   habitosFinalizados: number;
   habitosInactivos: number;
+  totalCompletados: number;
   completadosHoy: number;
   esperadosHoy: number;
   rachaActual: number;
@@ -153,7 +154,7 @@ export interface ResumenStats {
 }
 
 export interface ActividadDia {
-  fecha: string; // "2026-09-18"
+  fecha: string;
   completados: number;
   esperados: number;
   porcentaje: number;
@@ -187,12 +188,12 @@ export interface HabitoSeguimiento {
 }
 
 export interface DiaSeguimiento {
-  fecha: string; 
+  fecha: string;
   completados: number;
   esperados: number;
   porcentaje: number;
-  completadosIds: string[]; 
-  aplicanIds: string[]; 
+  completadosIds: string[];
+  aplicanIds: string[];
 }
 
 export interface Seguimiento {

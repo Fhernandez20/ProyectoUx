@@ -73,7 +73,11 @@ export class StatisticsService {
     const hoy = inicioDelDia(new Date());
 
     const rachas = calcularRachas(new Set(datos.porDia.keys()), hoy);
-    const hoyEval = evaluarDia(datos.habitos, datos.porDia.get(claveDia(hoy)), hoy);
+    const hoyEval = evaluarDia(
+      datos.habitos,
+      datos.porDia.get(claveDia(hoy)),
+      hoy,
+    );
     const contarEstado = (estado: EstadoHabito) =>
       datos.habitos.filter((h) => estadoHabito(h, hoy) === estado).length;
 
@@ -82,7 +86,11 @@ export class StatisticsService {
       habitosActivos: contarEstado('activo'),
       habitosFinalizados: contarEstado('finalizado'),
       habitosInactivos: contarEstado('inactivo'),
-      completadosHoy: hoyEval.completados, 
+      totalCompletados: datos.habitos.reduce(
+        (suma, h) => suma + (datos.porHabito.get(h.id)?.size ?? 0),
+        0,
+      ),
+      completadosHoy: hoyEval.completados,
       esperadosHoy: redondear1(hoyEval.esperados),
       rachaActual: rachas.actual,
       mejorRacha: rachas.mejor,
@@ -112,9 +120,9 @@ export class StatisticsService {
       const r = evaluarDia(datos.habitos, datos.porDia.get(clave), dia);
       resultado.push({
         fecha: clave,
-        completados: r.completados, 
+        completados: r.completados,
         esperados: redondear1(r.esperados),
-        porcentaje: porcentaje(r.completadosPonderados, r.esperados), 
+        porcentaje: porcentaje(r.completadosPonderados, r.esperados),
       });
     }
     return resultado;
@@ -163,7 +171,8 @@ export class StatisticsService {
       );
     }
     const cantidad =
-      Math.round((hasta.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      Math.round((hasta.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000)) +
+      1;
     if (cantidad > MAX_DIAS_SEGUIMIENTO) {
       throw new BadRequestException(
         `El rango máximo es de ${MAX_DIAS_SEGUIMIENTO} días`,
@@ -174,7 +183,6 @@ export class StatisticsService {
     const idsExistentes = new Set(datos.habitos.map((h) => h.id));
     const relevantes = new Set<string>();
 
-   
     const dias: {
       fecha: string;
       completados: number;
@@ -183,8 +191,8 @@ export class StatisticsService {
       completadosIds: string[];
       aplicanIds: string[];
     }[] = [];
-    let totalCompletados = 0; 
-    let totalCompletadosPonderados = 0; 
+    let totalCompletados = 0;
+    let totalCompletadosPonderados = 0;
     let totalEsperados = 0;
 
     for (let i = 0; i < cantidad; i++) {
@@ -236,9 +244,9 @@ export class StatisticsService {
       habitos,
       dias,
       resumen: {
-        completados: totalCompletados, 
+        completados: totalCompletados,
         esperados: redondear1(totalEsperados),
-        porcentaje: porcentaje(totalCompletadosPonderados, totalEsperados), 
+        porcentaje: porcentaje(totalCompletadosPonderados, totalEsperados),
         diasConActividad: dias.filter((d) => d.completados > 0).length,
       },
     };
