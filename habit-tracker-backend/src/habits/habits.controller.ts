@@ -43,19 +43,24 @@ export class HabitsController {
   @Post()
   @ApiOperation({ summary: 'Crear un hábito' })
   @ApiCreatedResponse({ description: 'Hábito creado' })
-  @ApiBadRequestResponse({ description: 'Datos inválidos (por ejemplo, fecha de fin anterior a la de inicio)' })
+  @ApiBadRequestResponse({
+    description:
+      'Datos inválidos (por ejemplo, fecha de fin anterior a la de inicio)',
+  })
   create(@Request() req: RequestConUsuario, @Body() dto: CreateHabitoDto) {
     return this.habitsService.create(req.user.userId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar mis hábitos', description: 'Ordenados por prioridad (1 = alta primero).' })
+  @ApiOperation({
+    summary: 'Listar mis hábitos',
+    description: 'Ordenados por prioridad (1 = alta primero).',
+  })
   @ApiOkResponse({ description: 'Lista de hábitos del usuario' })
   findAll(@Request() req: RequestConUsuario) {
     return this.habitsService.findAll(req.user.userId);
   }
 
-  // Debe ir ANTES de @Get(':id'), si no Nest interpretaría "completados-hoy" como un id
   @Get('completados-hoy')
   @ApiOperation({ summary: 'IDs de los hábitos completados hoy' })
   @ApiOkResponse({ description: 'Arreglo de ids' })
@@ -69,12 +74,19 @@ export class HabitsController {
   @ApiBadRequestResponse({ description: 'Identificador no válido' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
   @ApiNotFoundResponse({ description: 'El hábito no existe' })
-  findOne(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
+  findOne(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
     return this.habitsService.findOne(req.user.userId, id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Editar un hábito', description: 'Solo se modifican los campos enviados. fechaFin: null quita la fecha de fin.' })
+  @ApiOperation({
+    summary: 'Editar un hábito',
+    description:
+      'Solo se modifican los campos enviados. fechaFin: null quita la fecha de fin.',
+  })
   @ApiOkResponse({ description: 'Hábito actualizado' })
   @ApiBadRequestResponse({ description: 'Identificador o datos no válidos' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
@@ -88,24 +100,56 @@ export class HabitsController {
   }
 
   @Patch(':id/toggle')
-  @ApiOperation({ summary: 'Activar o desactivar un hábito', description: 'Un hábito inactivo no cuenta en el cumplimiento ni se puede completar.' })
+  @ApiOperation({
+    summary: 'Activar o desactivar un hábito',
+    description:
+      'Un hábito inactivo no cuenta en el cumplimiento ni se puede completar.',
+  })
   @ApiOkResponse({ description: 'Hábito actualizado' })
   @ApiBadRequestResponse({ description: 'Identificador no válido' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
   @ApiNotFoundResponse({ description: 'El hábito no existe' })
-  toggleActivo(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
+  toggleActivo(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
     return this.habitsService.toggleActivo(req.user.userId, id);
   }
 
   @Post(':id/completar')
   @ApiOperation({ summary: 'Marcar un hábito como completado hoy' })
   @ApiCreatedResponse({ description: 'Registro creado' })
-  @ApiBadRequestResponse({ description: 'Identificador no válido, hábito inactivo o fuera de vigencia (fechas de inicio y fin)' })
+  @ApiBadRequestResponse({
+    description:
+      'Identificador no válido, hábito inactivo o fuera de vigencia (fechas de inicio y fin)',
+  })
   @ApiConflictResponse({ description: 'Ya se completó hoy' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
   @ApiNotFoundResponse({ description: 'El hábito no existe' })
-  completar(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
+  completar(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
     return this.habitsService.completar(req.user.userId, id);
+  }
+
+  @Delete(':id/completar')
+  @ApiOperation({
+    summary: 'Desmarcar el completado de hoy',
+    description:
+      'Deshace el completado de hoy, por ejemplo si se marcó por accidente. No toca días anteriores.',
+  })
+  @ApiOkResponse({ description: 'Completado de hoy eliminado' })
+  @ApiBadRequestResponse({ description: 'Identificador no válido' })
+  @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
+  @ApiNotFoundResponse({
+    description: 'El hábito no existe o no está completado hoy',
+  })
+  descompletar(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    return this.habitsService.descompletar(req.user.userId, id);
   }
 
   @Get(':id/registros')
@@ -114,17 +158,26 @@ export class HabitsController {
   @ApiBadRequestResponse({ description: 'Identificador no válido' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
   @ApiNotFoundResponse({ description: 'El hábito no existe' })
-  historial(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
+  historial(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
     return this.habitsService.historial(req.user.userId, id);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un hábito', description: 'También elimina todos sus registros.' })
+  @ApiOperation({
+    summary: 'Eliminar un hábito',
+    description: 'También elimina todos sus registros.',
+  })
   @ApiOkResponse({ description: 'Hábito eliminado' })
   @ApiBadRequestResponse({ description: 'Identificador no válido' })
   @ApiForbiddenResponse({ description: 'El hábito pertenece a otro usuario' })
   @ApiNotFoundResponse({ description: 'El hábito no existe' })
-  remove(@Request() req: RequestConUsuario, @Param('id', ParseObjectIdPipe) id: string) {
+  remove(
+    @Request() req: RequestConUsuario,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
     return this.habitsService.remove(req.user.userId, id);
   }
 }

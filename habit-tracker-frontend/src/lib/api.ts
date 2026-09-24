@@ -137,6 +137,9 @@ export const habitsApi = {
   completar: (id: string) =>
     request(`/habits/${id}/completar`, { method: 'POST' }),
 
+  descompletar: (id: string) =>
+    request(`/habits/${id}/completar`, { method: 'DELETE' }),
+
   completadosHoy: () => request<string[]>('/habits/completados-hoy'),
 };
 

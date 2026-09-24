@@ -6,14 +6,14 @@ import {
   Typography,
   Button,
   Card,
-  CardContent,
-  CardActions,
   Chip,
   IconButton,
   Switch,
   Snackbar,
   Alert,
   CircularProgress,
+  Stack,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -25,7 +25,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutlined';
-import CheckCircleIcon from '@mui/icons-material/CheckCircleOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CirculoIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { habitsApi, Habito, HabitoInput, ApiError } from '@/lib/api';
 import HabitoFormDialog from '@/components/HabitoFormDialog';
 import { formatoFechaCorta } from '@/lib/fechas';
@@ -50,6 +51,7 @@ export default function HabitosPage() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [completadosHoy, setCompletadosHoy] = useState<Set<string>>(new Set());
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIALES);
+  const [enProceso, setEnProceso] = useState<Set<string>>(new Set());
 
   async function cargarHabitos() {
     try {
@@ -116,20 +118,53 @@ export default function HabitosPage() {
     }
   }
 
-  async function completarHoy(h: Habito) {
+  function marcarEnProceso(id: string, activo: boolean) {
+    setEnProceso((prev) => {
+      const nuevo = new Set(prev);
+      if (activo) nuevo.add(id);
+      else nuevo.delete(id);
+      return nuevo;
+    });
+  }
+
+  function marcarCompletado(id: string, completado: boolean) {
+    setCompletadosHoy((prev) => {
+      const nuevo = new Set(prev);
+      if (completado) nuevo.add(id);
+      else nuevo.delete(id);
+      return nuevo;
+    });
+  }
+
+  async function alternarCompletado(h: Habito) {
+    const yaCompletado = completadosHoy.has(h.id);
+    marcarEnProceso(h.id, true);
     try {
-      await habitsApi.completar(h.id);
-      setCompletadosHoy((prev) => new Set(prev).add(h.id));
-      setSnackbar(`"${h.nombre}" marcado como completado hoy`);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // Ya estaba completado hoy (ej. desde otra pestaña): solo sincronizamos la vista
-        setCompletadosHoy((prev) => new Set(prev).add(h.id));
+      if (yaCompletado) {
+        await habitsApi.descompletar(h.id);
+        marcarCompletado(h.id, false);
+        setSnackbar(`"${h.nombre}" desmarcado`);
+      } else {
+        await habitsApi.completar(h.id);
+        marcarCompletado(h.id, true);
+        setSnackbar(`"${h.nombre}" completado hoy`);
       }
-      setSnackbar(
-        err instanceof ApiError ? err.message : 'No se pudo completar',
-      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) marcarCompletado(h.id, true);
+      if (err instanceof ApiError && err.status === 404 && yaCompletado) {
+        marcarCompletado(h.id, false);
+      }
+      setSnackbar(err instanceof ApiError ? err.message : 'No se pudo actualizar');
+    } finally {
+      marcarEnProceso(h.id, false);
     }
+  }
+
+  function motivoNoDisponible(h: Habito): string | null {
+    if (!h.activo) return 'Activa el hábito para poder completarlo';
+    if (estaFinalizado(h)) return 'Este hábito ya finalizó';
+    if (aunNoInicia(h)) return `Este hábito inicia el ${formatoFechaCorta(h.fechaInicio)}`;
+    return null;
   }
 
   const visibles = habitos ? aplicarFiltros(habitos, filtros) : [];
@@ -264,7 +299,7 @@ export default function HabitosPage() {
                 size="small"
                 onClick={() => setFiltros(FILTROS_INICIALES)}
               >
-                Limpiar filtros
+                Restablecer filtros
               </Button>
             )}
           </Box>
@@ -274,136 +309,176 @@ export default function HabitosPage() {
       {habitos && habitos.length > 0 && visibles.length === 0 && (
         <Card variant="outlined" sx={{ textAlign: 'center', py: 5 }}>
           <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Ningún hábito coincide con los filtros.
+            {hayFiltrosActivos(filtros)
+              ? 'Ningún hábito coincide con los filtros.'
+              : 'No tienes hábitos activos en este momento.'}
           </Typography>
-          <Button variant="outlined" onClick={() => setFiltros(FILTROS_INICIALES)}>
-            Limpiar filtros
+          <Button
+            variant="outlined"
+            onClick={() => setFiltros({ ...FILTROS_INICIALES, estado: 'todos' })}
+          >
+            Ver todos los hábitos
           </Button>
         </Card>
       )}
 
-      <Grid container spacing={2}>
+      <Stack spacing={1.5} component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
         {visibles.map((h) => {
           const completadoHoy = completadosHoy.has(h.id);
           const finalizado = estaFinalizado(h);
           const porIniciar = aunNoInicia(h);
-          return (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={h.id}>
-            <Card
-              variant="outlined"
-              sx={
-                completadoHoy
-                  ? { borderColor: 'success.main', borderWidth: 2, bgcolor: 'rgba(22, 163, 74, 0.04)' }
-                  : undefined
+          const procesando = enProceso.has(h.id);
+          const motivo = completadoHoy ? null : motivoNoDisponible(h);
+          const prioridad = infoPrioridad(h.prioridad);
+
+          const botonCompletar = (
+            <Button
+              variant={completadoHoy ? 'contained' : 'outlined'}
+              color={completadoHoy ? 'success' : 'secondary'}
+              onClick={() => alternarCompletado(h)}
+              disabled={procesando || (!completadoHoy && !esVigenteHoy(h))}
+              aria-pressed={completadoHoy}
+              startIcon={
+                procesando ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : completadoHoy ? (
+                  <CheckCircleIcon />
+                ) : (
+                  <CirculoIcon />
+                )
               }
+              sx={{
+                minWidth: 168,
+                boxShadow: 'none',
+                '&:hover': { boxShadow: 'none' },
+              }}
             >
-              <CardContent>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                  }}
-                >
+              {completadoHoy ? 'Completado' : 'Completar hoy'}
+            </Button>
+          );
+
+          return (
+            <Card
+              key={h.id}
+              component="li"
+              variant="outlined"
+              sx={{
+                transition: 'border-color 0.2s, background-color 0.2s',
+                ...(completadoHoy && {
+                  borderColor: 'success.main',
+                  bgcolor: 'rgba(22, 163, 74, 0.04)',
+                }),
+                ...(!h.activo && { opacity: 0.75 }),
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  alignItems: { xs: 'stretch', md: 'center' },
+                  gap: { xs: 1.5, md: 3 },
+                  px: { xs: 2, sm: 2.5 },
+                  py: 2,
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+                      {h.nombre}
+                    </Typography>
+                    <Chip
+                      label={prioridad.label}
+                      size="small"
+                      variant="outlined"
+                      color={prioridad.color}
+                    />
+                    {!h.activo && <Chip label="Inactivo" size="small" />}
+                    {finalizado && <Chip label="Finalizado" size="small" color="warning" />}
+                    {porIniciar && (
+                      <Chip
+                        label={`Inicia el ${formatoFechaCorta(h.fechaInicio)}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+
+                  {h.descripcion && (
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>
+                      {h.descripcion}
+                    </Typography>
+                  )}
+
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
                       flexWrap: 'wrap',
-                      pr: 1,
+                      mt: 1,
                     }}
                   >
-                    <Typography variant="h6" style={{ fontWeight: 500 }}>
-                      {h.nombre}
+                    <Chip label={h.frecuencia} size="small" />
+                    {h.categoria && <Chip label={h.categoria} size="small" variant="outlined" />}
+                    <Typography variant="caption" color="text.secondary">
+                      Desde {formatoFechaCorta(h.fechaInicio)}
+                      {h.fechaFin ? ` · hasta ${formatoFechaCorta(h.fechaFin)}` : ''}
                     </Typography>
-                    <Chip
-                      label={infoPrioridad(h.prioridad).label}
-                      size="small"
-                      variant="outlined"
-                      color={infoPrioridad(h.prioridad).color}
-                    />
                   </Box>
-                  <Switch
-                    checked={h.activo}
-                    onChange={() => toggleActivo(h)}
-                    size="small"
-                    slotProps={{
-                      input: {
-                        'aria-label': `Activar o desactivar ${h.nombre}`,
-                      },
-                    }}
-                  />
                 </Box>
-                {h.descripcion && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {h.descripcion}
-                  </Typography>
-                )}
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  Desde {formatoFechaCorta(h.fechaInicio)}
-                  {h.fechaFin ? ` · hasta ${formatoFechaCorta(h.fechaFin)}` : ''}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                  <Chip label={h.frecuencia} size="small" />
-                  {h.categoria && (
-                    <Chip label={h.categoria} size="small" variant="outlined" />
-                  )}
-                  {!h.activo && (
-                    <Chip label="Inactivo" size="small" color="default" />
-                  )}
-                  {finalizado && (
-                    <Chip label="Finalizado" size="small" color="warning" />
-                  )}
-                  {porIniciar && (
-                    <Chip
-                      label={`Inicia el ${formatoFechaCorta(h.fechaInicio)}`}
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
-                  {completadoHoy && (
-                    <Chip
-                      icon={<CheckCircleIcon />}
-                      label="Completado hoy"
-                      size="small"
-                      color="success"
-                    />
-                  )}
-                </Box>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
-                <Button
-                  size="small"
-                  color={completadoHoy ? 'success' : 'primary'}
-                  startIcon={<CheckCircleIcon />}
-                  onClick={() => completarHoy(h)}
-                  disabled={!esVigenteHoy(h) || completadoHoy}
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: { xs: 'space-between', md: 'flex-end' },
+                    gap: 1,
+                    flexShrink: 0,
+                  }}
                 >
-                  {completadoHoy ? 'Completado' : 'Completar hoy'}
-                </Button>
-                <Box>
-                  <IconButton
-                    size="small"
-                    aria-label={`Editar ${h.nombre}`}
-                    onClick={() => abrirEditar(h)}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    aria-label={`Eliminar ${h.nombre}`}
-                    onClick={() => setHabitoAEliminar(h)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {motivo ? (
+                    <Tooltip title={motivo} arrow>
+                      <span>{botonCompletar}</span>
+                    </Tooltip>
+                  ) : completadoHoy ? (
+                    <Tooltip title="Haz clic para desmarcarlo" arrow>
+                      {botonCompletar}
+                    </Tooltip>
+                  ) : (
+                    botonCompletar
+                  )}
+
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title={h.activo ? 'Desactivar' : 'Activar'} arrow>
+                      <Switch
+                        checked={h.activo}
+                        onChange={() => toggleActivo(h)}
+                        size="small"
+                        slotProps={{
+                          input: { 'aria-label': `Activar o desactivar ${h.nombre}` },
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Editar" arrow>
+                      <IconButton aria-label={`Editar ${h.nombre}`} onClick={() => abrirEditar(h)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar" arrow>
+                      <IconButton
+                        aria-label={`Eliminar ${h.nombre}`}
+                        onClick={() => setHabitoAEliminar(h)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </Box>
-              </CardActions>
+              </Box>
             </Card>
-          </Grid>
           );
         })}
-      </Grid>
+      </Stack>
 
       <HabitoFormDialog
         open={dialogAbierto}

@@ -14,7 +14,6 @@ import { aplicaEnDia } from '../statistics/statistics.utils';
 export class HabitsService {
   constructor(private prisma: PrismaService) {}
 
-  /** La fecha de fin no puede ser anterior a la de inicio (se compara por día). */
   private validarRangoFechas(inicio?: string | null, fin?: string | null) {
     if (inicio && fin && fin.slice(0, 10) < inicio.slice(0, 10)) {
       throw new BadRequestException(
@@ -24,7 +23,10 @@ export class HabitsService {
   }
 
   create(usuarioId: string, dto: CreateHabitoDto) {
-    this.validarRangoFechas(dto.fechaInicio ?? new Date().toISOString(), dto.fechaFin);
+    this.validarRangoFechas(
+      dto.fechaInicio ?? new Date().toISOString(),
+      dto.fechaFin,
+    );
 
     return this.prisma.habito.create({
       data: {
@@ -64,10 +66,11 @@ export class HabitsService {
   async update(usuarioId: string, id: string, dto: UpdateHabitoDto) {
     const actual = await this.findOne(usuarioId, id);
 
-    // Valores finales tras el cambio (lo que no se envía se conserva)
     const inicioFinal = dto.fechaInicio ?? actual.fechaInicio.toISOString();
     const finFinal =
-      dto.fechaFin === null ? null : (dto.fechaFin ?? actual.fechaFin?.toISOString());
+      dto.fechaFin === null
+        ? null
+        : (dto.fechaFin ?? actual.fechaFin?.toISOString());
     this.validarRangoFechas(inicioFinal, finFinal);
 
     return this.prisma.habito.update({
@@ -75,7 +78,6 @@ export class HabitsService {
       data: {
         ...dto,
         fechaInicio: dto.fechaInicio ? new Date(dto.fechaInicio) : undefined,
-        // null quita la fecha de fin; undefined la deja como estaba
         fechaFin:
           dto.fechaFin === null
             ? null
@@ -100,7 +102,6 @@ export class HabitsService {
     });
   }
 
-  // Rango [00:00 de hoy, 00:00 de mañana) según la hora del servidor
   private rangoDeHoy() {
     const inicio = new Date();
     inicio.setHours(0, 0, 0, 0);
@@ -155,6 +156,26 @@ export class HabitsService {
         completado: true,
       },
     });
+  }
+
+  async descompletar(usuarioId: string, habitoId: string) {
+    await this.findOne(usuarioId, habitoId);
+
+    const { inicio, fin } = this.rangoDeHoy();
+    const { count } = await this.prisma.registro.deleteMany({
+      where: {
+        habitoId,
+        usuarioId,
+        completado: true,
+        fecha: { gte: inicio, lt: fin },
+      },
+    });
+    if (count === 0) {
+      throw new NotFoundException(
+        'Este hábito no está marcado como completado hoy',
+      );
+    }
+    return { habitoId, completadoHoy: false };
   }
 
   async historial(usuarioId: string, habitoId: string) {

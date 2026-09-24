@@ -8,35 +8,31 @@ export type OrdenHabitos = 'prioridad' | 'nombre' | 'inicio';
 export interface Filtros {
   busqueda: string;
   estado: EstadoFiltro;
-  categoria: string; // 'todas' o el nombre de la categoría
+  categoria: string;
   orden: OrdenHabitos;
 }
 
 export const FILTROS_INICIALES: Filtros = {
   busqueda: '',
-  estado: 'todos',
+  estado: 'activos',
   categoria: 'todas',
-  orden: 'prioridad',
+  orden: 'inicio',
 };
 
-/** Un hábito está finalizado si su fecha de fin ya pasó. */
 export function estaFinalizado(h: Habito, hoy: string = hoyLocal()): boolean {
   return !!h.fechaFin && fechaLocal(h.fechaFin) < hoy;
 }
 
-/** Un hábito "aún no inicia" si su fecha de inicio es futura. */
 export function aunNoInicia(h: Habito, hoy: string = hoyLocal()): boolean {
   return fechaLocal(h.fechaInicio) > hoy;
 }
 
-/** ¿Se puede marcar como completado hoy? */
 export function esVigenteHoy(h: Habito, hoy: string = hoyLocal()): boolean {
   return h.activo && !estaFinalizado(h, hoy) && !aunNoInicia(h, hoy);
 }
 
 const normalizar = (t: string) => t.trim().toLowerCase();
 
-/** Categorías distintas (sin distinguir mayúsculas), ordenadas alfabéticamente. */
 export function categoriasDisponibles(habitos: Habito[]): string[] {
   const vistas = new Map<string, string>();
   for (const h of habitos) {
@@ -48,7 +44,10 @@ export function categoriasDisponibles(habitos: Habito[]): string[] {
 
 export function hayFiltrosActivos(f: Filtros): boolean {
   return (
-    f.busqueda.trim() !== '' || f.estado !== 'todos' || f.categoria !== 'todas'
+    f.busqueda.trim() !== '' ||
+    f.estado !== FILTROS_INICIALES.estado ||
+    f.categoria !== FILTROS_INICIALES.categoria ||
+    f.orden !== FILTROS_INICIALES.orden
   );
 }
 
@@ -81,9 +80,11 @@ export function aplicarFiltros(
   return [...filtrados].sort((a, b) => {
     if (f.orden === 'nombre') return a.nombre.localeCompare(b.nombre, 'es');
     if (f.orden === 'inicio') {
-      return fechaLocal(b.fechaInicio).localeCompare(fechaLocal(a.fechaInicio));
+      return (
+        fechaLocal(b.fechaInicio).localeCompare(fechaLocal(a.fechaInicio)) ||
+        a.nombre.localeCompare(b.nombre, 'es')
+      );
     }
-    // prioridad: Alta primero, luego Media y Baja; a igual nivel, por nombre
     return (
       nivelPrioridad(a.prioridad) - nivelPrioridad(b.prioridad) ||
       a.nombre.localeCompare(b.nombre, 'es')
