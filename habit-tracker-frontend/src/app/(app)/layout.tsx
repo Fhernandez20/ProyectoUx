@@ -46,17 +46,19 @@ export default function AppLayout({
         sx={{
           flexGrow: 1,
           minWidth: 0,
-          p: { xs: 2, sm: 3 },
+          px: { xs: 2, sm: 3, md: 5, lg: 6 },
+          pt: { xs: 2, sm: 3, md: 4 },
           pb: {
             xs: `calc(${ALTO_BARRA_INFERIOR}px + env(safe-area-inset-bottom, 0px) + 16px)`,
             sm: 3,
+            md: 5,
           },
           bgcolor: 'background.default',
           minHeight: '100vh',
         }}
       >
         <Toolbar />
-        {children}
+        <Box sx={{ maxWidth: 1400, mx: 'auto', width: '100%' }}>{children}</Box>
       </Box>
       <BarraInferior />
     </Box>
