@@ -17,25 +17,72 @@ import { HabitoStats } from '@/lib/api';
 const plural = (n: number, uno: string, varios: string) =>
   `${n} ${n === 1 ? uno : varios}`;
 
-/** Meta de la semana: los semanales solo necesitan 1, el resto 7 días. */
-const metaSemana = (h: HabitoStats) => (h.frecuencia === 'semanal' ? 1 : 7);
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-/** Porcentaje de la semana, de 0 a 100 (un semanal hecho 2 veces sigue en 100). */
-export const porcentajeSemana = (h: HabitoStats) =>
-  Math.min(100, Math.round((h.completadosSemana / metaSemana(h)) * 100));
+function fechaCorta(clave: string) {
+  const [, m, d] = clave.split('-').map(Number);
+  return `${d} ${MESES[m - 1]}`;
+}
+
+function textoPeriodo(inicio: string, fin: string) {
+  const [, mi, di] = inicio.split('-').map(Number);
+  const [, mf, df] = fin.split('-').map(Number);
+  if (inicio === fin) return `El ${di} ${MESES[mf - 1]}`;
+  if (mi === mf) return `Del ${di} al ${df} ${MESES[mf - 1]}`;
+  return `Del ${di} ${MESES[mi - 1]} al ${df} ${MESES[mf - 1]}`;
+}
+
+export const porcentajeGeneral = (h: HabitoStats) =>
+  h.metaPeriodo > 0
+    ? Math.min(100, Math.round((h.completadosPeriodo / h.metaPeriodo) * 100))
+    : 0;
 
 const colorBarra = (p: number): 'success' | 'warning' | 'error' =>
   p >= 70 ? 'success' : p >= 40 ? 'warning' : 'error';
 
-function textoSemana(h: HabitoStats) {
+const unidades = (h: HabitoStats): [string, string] =>
+  h.frecuencia === 'semanal' ? ['semana', 'semanas'] : ['día', 'días'];
+
+const textoRacha = (h: HabitoStats, n: number) => {
+  const [uno, varios] = unidades(h);
+  return plural(n, uno, varios);
+};
+
+function textoTranscurrido(h: HabitoStats) {
+  if (!h.diasTotales || !h.fechaFin) return null;
+  const fin = `termina el ${fechaCorta(h.fechaFin)}.`;
   if (h.frecuencia === 'semanal') {
-    return h.completadosSemana > 0 ? 'Hecho' : 'Pendiente';
+    const total = Math.ceil(h.diasTotales / 7);
+    const actual = Math.min(Math.ceil(h.diasTranscurridos / 7), total);
+    return `Semana ${actual} de ${total}, ${fin}`;
   }
-  return `${h.completadosSemana} de 7 días`;
+  return `Día ${Math.min(h.diasTranscurridos, h.diasTotales)} de ${h.diasTotales}, ${fin}`;
+}
+
+function textoAvance(h: HabitoStats) {
+  const hechos = Math.min(h.completadosPeriodo, h.metaPeriodo);
+  const [uno, varios] = unidades(h);
+  return `${hechos} de ${plural(h.metaPeriodo, uno, varios)}`;
+}
+
+function textoReciente(h: HabitoStats) {
+  if (h.frecuencia === 'semanal') {
+    return `Esta semana: ${h.completadosSemana > 0 ? 'hecho' : 'pendiente'}.`;
+  }
+  const dias = Math.min(7, h.diasTranscurridos);
+  return `Esta semana: ${h.completadosSemana} de ${dias}.`;
 }
 
 function FilaHabito({ h, inactivo = false }: { h: HabitoStats; inactivo?: boolean }) {
-  const p = porcentajeSemana(h);
+  const noEmpieza = h.metaPeriodo === 0;
+  const p = porcentajeGeneral(h);
+  const detalle = [
+    noEmpieza ? null : textoTranscurrido(h),
+    noEmpieza ? null : textoReciente(h),
+    `Mejor racha: ${textoRacha(h, h.mejorRacha)}.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <Box
@@ -61,86 +108,177 @@ function FilaHabito({ h, inactivo = false }: { h: HabitoStats; inactivo?: boolea
           <Typography variant="body1" sx={{ fontWeight: 500 }}>
             {h.nombre}
           </Typography>
-          {/* "diario" es lo normal: solo se marca cuando es otra frecuencia */}
           {h.frecuencia !== 'diario' && <Chip label={h.frecuencia} size="small" />}
           {!inactivo && h.rachaActual > 0 && (
             <Chip
               icon={<FireIcon />}
-              label={`Racha de ${plural(h.rachaActual, 'día', 'días')}`}
+              label={`Racha de ${textoRacha(h, h.rachaActual)}`}
               size="small"
               color="warning"
               variant="outlined"
             />
           )}
         </Box>
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {textoSemana(h)}
-        </Typography>
+        {noEmpieza ? (
+          <Typography variant="body2" color="text.secondary">
+            Empieza el {fechaCorta(h.fechaInicio)}
+          </Typography>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+            <Typography variant="body2" color={inactivo ? 'text.disabled' : 'text.secondary'}>
+              {textoAvance(h)}
+            </Typography>
+            <Typography variant="body1" sx={{ fontWeight: 600, minWidth: 44, textAlign: 'right' }}>
+              {p}%
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       <LinearProgress
         variant="determinate"
         value={p}
-        color={inactivo ? 'inherit' : colorBarra(p)}
-        sx={{ height: 8, borderRadius: 4, my: 1, opacity: inactivo ? 0.4 : 1 }}
-        aria-label={`${h.nombre}: ${p}% de la semana`}
+        color={inactivo || noEmpieza ? 'inherit' : colorBarra(p)}
+        sx={{ height: 8, borderRadius: 4, my: 1, opacity: inactivo || noEmpieza ? 0.3 : 1 }}
+        aria-label={`${h.nombre}: ${p}% de cumplimiento desde que empezó`}
       />
 
       <Typography variant="body2" color={inactivo ? 'text.disabled' : 'text.secondary'}>
-        Este mes: {plural(h.completadosMes, 'vez', 'veces')}. Mejor racha:{' '}
-        {plural(h.mejorRacha, 'día', 'días')}.
+        {detalle}
       </Typography>
     </Box>
   );
 }
 
-export default function ListaHabitosStats({ habitos }: { habitos: HabitoStats[] }) {
-  const [verInactivos, setVerInactivos] = useState(false);
+function FilaFinalizado({ h }: { h: HabitoStats }) {
+  const p = porcentajeGeneral(h);
 
-  // De mejor a peor en la semana; si empatan, el de más veces en el mes
-  const activos = habitos
-    .filter((h) => h.activo)
+  return (
+    <Box
+      component="li"
+      sx={{ py: 1.5, borderBottom: 1, borderColor: 'divider', listStyle: 'none' }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+            {h.nombre}
+          </Typography>
+          {h.frecuencia !== 'diario' && <Chip label={h.frecuencia} size="small" />}
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {textoAvance(h)}
+          </Typography>
+          <Typography variant="body1" sx={{ fontWeight: 600, minWidth: 44, textAlign: 'right' }}>
+            {p}%
+          </Typography>
+        </Box>
+      </Box>
+
+      <LinearProgress
+        variant="determinate"
+        value={p}
+        color="secondary"
+        sx={{ height: 8, borderRadius: 4, my: 1 }}
+        aria-label={`${h.nombre}: ${p}% de su periodo`}
+      />
+
+      <Typography variant="body2" color="text.secondary">
+        {h.fechaFin ? `${textoPeriodo(h.fechaInicio, h.fechaFin)}. ` : ''}Mejor racha:{' '}
+        {textoRacha(h, h.mejorRacha)}.
+      </Typography>
+    </Box>
+  );
+}
+
+function SeccionPlegable({
+  titulo,
+  descripcion,
+  children,
+}: {
+  titulo: string;
+  descripcion?: string;
+  children: React.ReactNode;
+}) {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Button
+        size="small"
+        color="inherit"
+        onClick={() => setAbierta((v) => !v)}
+        endIcon={abierta ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        aria-expanded={abierta}
+        sx={{ color: 'text.secondary', textTransform: 'none', px: 0 }}
+      >
+        {titulo}
+      </Button>
+      <Collapse in={abierta}>
+        {descripcion && (
+          <Typography variant="caption" color="text.secondary" component="p">
+            {descripcion}
+          </Typography>
+        )}
+        <Box component="ul" sx={{ m: 0, p: 0 }} aria-label={titulo}>
+          {children}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+export default function ListaHabitosStats({ habitos }: { habitos: HabitoStats[] }) {
+  const vigentes = habitos
+    .filter((h) => h.activo && !h.finalizado)
     .sort(
       (a, b) =>
-        porcentajeSemana(b) - porcentajeSemana(a) ||
-        b.completadosMes - a.completadosMes,
+        porcentajeGeneral(b) - porcentajeGeneral(a) ||
+        b.completadosPeriodo - a.completadosPeriodo,
     );
-  const inactivos = habitos.filter((h) => !h.activo);
+  const finalizados = habitos
+    .filter((h) => h.finalizado)
+    .sort((a, b) => (b.fechaFin ?? '').localeCompare(a.fechaFin ?? ''));
+  const inactivos = habitos.filter((h) => !h.activo && !h.finalizado);
 
   return (
     <Box>
-      {activos.length === 0 ? (
+      {vigentes.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-          No tienes hábitos activos. Activa uno para ver su progreso aquí.
+          No tienes hábitos vigentes. Crea o activa uno para ver su progreso aquí.
         </Typography>
       ) : (
         <Box component="ul" sx={{ m: 0, p: 0 }} aria-label="Progreso por hábito">
-          {activos.map((h) => (
+          {vigentes.map((h) => (
             <FilaHabito key={h.id} h={h} />
           ))}
         </Box>
       )}
 
+      {finalizados.length > 0 && (
+        <SeccionPlegable
+          titulo={`Finalizados (${finalizados.length})`}
+          descripcion="Resultado de todo su periodo."
+        >
+          {finalizados.map((h) => (
+            <FilaFinalizado key={h.id} h={h} />
+          ))}
+        </SeccionPlegable>
+      )}
+
       {inactivos.length > 0 && (
-        <Box sx={{ mt: 1 }}>
-          <Button
-            size="small"
-            color="inherit"
-            onClick={() => setVerInactivos((v) => !v)}
-            endIcon={verInactivos ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            aria-expanded={verInactivos}
-            sx={{ color: 'text.secondary', textTransform: 'none', px: 0 }}
-          >
-            Inactivos ({inactivos.length})
-          </Button>
-          <Collapse in={verInactivos}>
-            <Box component="ul" sx={{ m: 0, p: 0 }} aria-label="Hábitos inactivos">
-              {inactivos.map((h) => (
-                <FilaHabito key={h.id} h={h} inactivo />
-              ))}
-            </Box>
-          </Collapse>
-        </Box>
+        <SeccionPlegable titulo={`Inactivos (${inactivos.length})`}>
+          {inactivos.map((h) => (
+            <FilaHabito key={h.id} h={h} inactivo />
+          ))}
+        </SeccionPlegable>
       )}
     </Box>
   );

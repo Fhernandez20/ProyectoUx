@@ -147,8 +147,6 @@ export default function EstadisticasPage() {
 
   const { resumen, mes, habitos } = datos;
 
-  // Quita las semanas del inicio en que todavía no existía ningún hábito,
-  // para que la gráfica no arranque con semanas en 0% que no eran reales
   const primeraConHabitos = datos.tendencia.findIndex((t) => t.conHabitos !== false);
   const tendencia =
     primeraConHabitos === -1 ? [] : datos.tendencia.slice(primeraConHabitos);
@@ -242,7 +240,6 @@ export default function EstadisticasPage() {
                 {completadosMes === 1 ? 'vez' : 'veces'} tus hábitos
               </Typography>
 
-              {/* Mejor racha: ocupa el espacio de abajo de la tarjeta */}
               <Box
                 sx={{
                   mt: 'auto',
@@ -256,7 +253,6 @@ export default function EstadisticasPage() {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <FireIcon sx={{ color: 'warning.main', fontSize: 40 }} />
-                  {/* warning.dark: el naranja claro no se lee bien como texto */}
                   <Typography
                     variant="h4"
                     sx={{ fontWeight: 500, color: 'warning.dark' }}
@@ -296,13 +292,10 @@ export default function EstadisticasPage() {
               </Box>
               <LineChart
                 height={260}
-                // Espacio a la derecha para que "Esta semana" quepa completo:
-                // la etiqueta va centrada en el último punto, pegado al borde
                 margin={{ right: 48 }}
                 xAxis={[
                   {
                     scaleType: 'point',
-                    // Cada punto son 7 días; el último termina hoy
                     data: tendencia.map((t, i) =>
                       i === tendencia.length - 1
                         ? 'Esta semana'
@@ -316,8 +309,6 @@ export default function EstadisticasPage() {
                     data: tendencia.map((t) => t.porcentaje),
                     label: 'Cumplimiento (%)',
                     color: theme.palette.secondary.main,
-                    // Recta entre semanas y un punto en cada una: solo hay datos
-                    // en los puntos, la curva suave hacía parecer que había más
                     curve: 'linear',
                     showMark: true,
                     valueFormatter: (v) => (v == null ? '' : `${v}%`),
@@ -344,7 +335,7 @@ export default function EstadisticasPage() {
               Seguimiento por hábito
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Últimos 7 días
+              Desde que empezaste
             </Typography>
           </Box>
           <ListaHabitosStats habitos={habitos} />

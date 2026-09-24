@@ -81,7 +81,7 @@ function diasDesde(iso?: string): number {
 }
 
 function masConstante(habitos: HabitoStats[]): HabitoStats | null {
-  const conRacha = habitos.filter((h) => h.mejorRacha > 0);
+  const conRacha = habitos.filter((h) => h.frecuencia !== 'semanal' && h.mejorRacha > 0);
   if (conRacha.length === 0) return null;
   return [...conRacha].sort(
     (a, b) => b.mejorRacha - a.mejorRacha || b.completadosMes - a.completadosMes,

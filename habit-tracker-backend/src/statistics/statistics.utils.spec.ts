@@ -2,6 +2,7 @@ import {
   HabitoBase,
   aplicaEnDia,
   calcularRachas,
+  calcularRachasSemanales,
   claveDia,
   evaluarDia,
   porcentaje,
@@ -36,7 +37,10 @@ describe('calcularRachas', () => {
   });
 
   it('racha actual cuenta hacia atrás desde hoy', () => {
-    const r = calcularRachas(dias('2026-09-16', '2026-09-17', '2026-09-18'), hoy);
+    const r = calcularRachas(
+      dias('2026-09-16', '2026-09-17', '2026-09-18'),
+      hoy,
+    );
     expect(r).toEqual({ actual: 3, mejor: 3 });
   });
 
@@ -52,14 +56,24 @@ describe('calcularRachas', () => {
 
   it('la mejor racha puede ser anterior a la actual', () => {
     const r = calcularRachas(
-      dias('2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-17', '2026-09-18'),
+      dias(
+        '2026-09-01',
+        '2026-09-02',
+        '2026-09-03',
+        '2026-09-04',
+        '2026-09-17',
+        '2026-09-18',
+      ),
       hoy,
     );
     expect(r).toEqual({ actual: 2, mejor: 4 });
   });
 
   it('funciona al cruzar de mes', () => {
-    const r = calcularRachas(dias('2026-08-30', '2026-08-31', '2026-09-01'), d(2026, 9, 1));
+    const r = calcularRachas(
+      dias('2026-08-30', '2026-08-31', '2026-09-01'),
+      d(2026, 9, 1),
+    );
     expect(r).toEqual({ actual: 3, mejor: 3 });
   });
 });
@@ -87,14 +101,22 @@ describe('evaluarDia y porcentaje', () => {
   it('2 hábitos diarios, 1 completado = 50%', () => {
     const habitos = [habito({ id: 'a' }), habito({ id: 'b' })];
     const r = evaluarDia(habitos, new Set(['a']), dia);
-    expect(r).toEqual({ completados: 1, completadosPonderados: 1, esperados: 2 });
+    expect(r).toEqual({
+      completados: 1,
+      completadosPonderados: 1,
+      esperados: 2,
+    });
     expect(porcentaje(r.completados, r.esperados)).toBe(50);
   });
 
   it('ignora completados de hábitos que no aplican ese día', () => {
     const habitos = [habito({ id: 'a', activo: false }), habito({ id: 'b' })];
     const r = evaluarDia(habitos, new Set(['a', 'b']), dia);
-    expect(r).toEqual({ completados: 1, completadosPonderados: 1, esperados: 1 });
+    expect(r).toEqual({
+      completados: 1,
+      completadosPonderados: 1,
+      esperados: 1,
+    });
   });
 
   it('un hábito semanal pesa 1/7 por día', () => {
@@ -108,23 +130,76 @@ describe('evaluarDia y porcentaje', () => {
       habito({ id: 'b', frecuencia: 'semanal' }),
     ];
     const r = evaluarDia(habitos, new Set(['a', 'b']), dia);
-    expect(r.completados).toBe(2); 
-    expect(r.completadosPonderados).toBeCloseTo(1 + 1 / 7); 
+    expect(r.completados).toBe(2);
+    expect(r.completadosPonderados).toBeCloseTo(1 + 1 / 7);
   });
 
   it('completadosPonderados: un hábito semanal completado varias veces en la semana no debe superar su propio peso diario', () => {
-
     const semanal = habito({ id: 'b', frecuencia: 'semanal' });
     let suma = 0;
     for (const d2 of [dia, new Date(2026, 8, 19), new Date(2026, 8, 20)]) {
       suma += evaluarDia([semanal], new Set(['b']), d2).completadosPonderados;
     }
     expect(suma).toBeCloseTo(3 / 7);
-    expect(suma).toBeLessThan(1); 
+    expect(suma).toBeLessThan(1);
   });
 
   it('porcentaje nunca pasa de 100 y con 0 esperados devuelve 0', () => {
     expect(porcentaje(5, 2)).toBe(100);
     expect(porcentaje(0, 0)).toBe(0);
+  });
+});
+
+describe('calcularRachasSemanales', () => {
+  const inicio = new Date(2026, 7, 3);
+  const hoy = new Date(2026, 8, 24, 12);
+
+  it('cuenta semanas seguidas desde el inicio del hábito, aunque sea un solo día por semana', () => {
+    const dias = new Set([
+      '2026-08-31',
+      '2026-09-08',
+      '2026-09-15',
+      '2026-09-24',
+    ]);
+    expect(calcularRachasSemanales(dias, inicio, hoy)).toEqual({
+      actual: 4,
+      mejor: 4,
+    });
+  });
+
+  it('la semana actual sin completar no rompe la racha', () => {
+    const dias = new Set(['2026-09-08', '2026-09-15']);
+    expect(calcularRachasSemanales(dias, inicio, hoy)).toEqual({
+      actual: 2,
+      mejor: 2,
+    });
+  });
+
+  it('una semana sin completar sí la rompe', () => {
+    const dias = new Set([
+      '2026-08-04',
+      '2026-08-11',
+      '2026-08-18',
+      '2026-09-15',
+    ]);
+    expect(calcularRachasSemanales(dias, inicio, hoy)).toEqual({
+      actual: 1,
+      mejor: 3,
+    });
+  });
+
+  it('dos veces en la misma semana cuentan como una', () => {
+    const dias = new Set(['2026-09-22', '2026-09-24']);
+    expect(calcularRachasSemanales(dias, inicio, hoy)).toEqual({
+      actual: 1,
+      mejor: 1,
+    });
+  });
+
+  it('sin actividad da cero', () => {
+    expect(calcularRachasSemanales(new Set(), inicio, hoy)).toEqual({
+      actual: 0,
+      mejor: 0,
+    });
   });
 });

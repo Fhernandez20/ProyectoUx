@@ -379,3 +379,112 @@ describe('StatisticsService.resumen - activos, finalizados e inactivos', () => {
     expect(r.totalCompletados).toBe(3);
   });
 });
+
+describe('StatisticsService.porHabito - avance desde que empezó', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 8, 24, 12, 0));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  const hab = [
+    habito({
+      id: 'teo',
+      fechaInicio: new Date(2026, 8, 20),
+      fechaFin: new Date(2026, 8, 20),
+    }),
+    habito({
+      id: 'proyecto',
+      fechaInicio: new Date(2026, 8, 16),
+      fechaFin: new Date(2026, 8, 18),
+    }),
+    habito({ id: 'agua', fechaInicio: new Date(2026, 8, 6) }),
+    habito({
+      id: 'parcial',
+      fechaInicio: new Date(2026, 8, 22),
+      fechaFin: new Date(2026, 8, 30),
+    }),
+    habito({ id: 'futuro', fechaInicio: new Date(2026, 8, 28) }),
+  ];
+  const reg = [
+    { habitoId: 'teo', fecha: new Date(2026, 8, 20, 9) },
+    { habitoId: 'proyecto', fecha: new Date(2026, 8, 17, 9) },
+    { habitoId: 'proyecto', fecha: new Date(2026, 8, 18, 9) },
+    { habitoId: 'agua', fecha: new Date(2026, 8, 7, 9) },
+    { habitoId: 'agua', fecha: new Date(2026, 8, 24, 9) },
+    { habitoId: 'parcial', fecha: new Date(2026, 8, 22, 9) },
+    { habitoId: 'parcial', fecha: new Date(2026, 8, 23, 9) },
+    { habitoId: 'parcial', fecha: new Date(2026, 8, 24, 9) },
+  ];
+
+  async function porId() {
+    const lista = await crearServicio(hab, reg).porHabito('u1');
+    return Object.fromEntries(lista.map((h) => [h.id, h]));
+  }
+
+  it('un finalizado se mide contra todo su periodo', async () => {
+    const por = await porId();
+    expect(por.teo).toMatchObject({
+      finalizado: true,
+      fechaFin: '2026-09-20',
+      completadosPeriodo: 1,
+      metaPeriodo: 1,
+      diasTotales: 1,
+    });
+    expect(por.proyecto).toMatchObject({
+      completadosPeriodo: 2,
+      metaPeriodo: 3,
+    });
+  });
+
+  it('uno sin fecha de fin se mide desde su inicio hasta hoy', async () => {
+    const por = await porId();
+    expect(por.agua).toMatchObject({
+      finalizado: false,
+      fechaFin: null,
+      completadosPeriodo: 2,
+      metaPeriodo: 19,
+      diasTranscurridos: 19,
+      diasTotales: null,
+    });
+  });
+
+  it('uno con rango en curso cuenta solo los días que ya pasaron', async () => {
+    const por = await porId();
+    expect(por.parcial).toMatchObject({
+      finalizado: false,
+      completadosPeriodo: 3,
+      metaPeriodo: 3,
+      diasTranscurridos: 3,
+      diasTotales: 9,
+    });
+  });
+
+  it('uno que aún no empieza tiene meta 0', async () => {
+    const por = await porId();
+    expect(por.futuro).toMatchObject({
+      completadosPeriodo: 0,
+      metaPeriodo: 0,
+      diasTranscurridos: 0,
+    });
+  });
+
+  it('un semanal se mide en semanas', async () => {
+    const [h] = await crearServicio(
+      [
+        habito({
+          id: 'sem',
+          frecuencia: 'semanal',
+          fechaInicio: new Date(2026, 8, 1),
+          fechaFin: new Date(2026, 8, 14),
+        }),
+      ],
+      [{ habitoId: 'sem', fecha: new Date(2026, 8, 3, 9) }],
+    ).porHabito('u1');
+    expect(h).toMatchObject({
+      finalizado: true,
+      completadosPeriodo: 1,
+      metaPeriodo: 2,
+    });
+  });
+});

@@ -176,6 +176,13 @@ export interface HabitoStats {
   nombre: string;
   frecuencia: string;
   activo: boolean;
+  finalizado: boolean;
+  fechaInicio: string;
+  fechaFin: string | null;
+  completadosPeriodo: number;
+  metaPeriodo: number;
+  diasTranscurridos: number;
+  diasTotales: number | null;
   completadoHoy: boolean;
   completadosSemana: number;
   completadosMes: number;

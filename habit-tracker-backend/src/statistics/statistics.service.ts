@@ -5,6 +5,7 @@ import {
   HabitoBase,
   aplicaEnDia,
   calcularRachas,
+  calcularRachasSemanales,
   claveDia,
   estadoHabito,
   evaluarDia,
@@ -156,6 +157,31 @@ export class StatisticsService {
     return resultado;
   }
 
+  private contarDias(desde: string, hasta: string): number {
+    if (hasta < desde) return 0;
+    return (
+      Math.round(
+        (fechaDesdeClave(hasta).getTime() - fechaDesdeClave(desde).getTime()) /
+          (24 * 60 * 60 * 1000),
+      ) + 1
+    );
+  }
+
+  private resultadoPeriodo(
+    h: HabitoBase,
+    dias: Set<string>,
+    desde: string,
+    hasta: string,
+  ) {
+    const totalDias = this.contarDias(desde, hasta);
+    const completados = [...dias].filter(
+      (d) => d >= desde && d <= hasta,
+    ).length;
+    const meta =
+      h.frecuencia === 'semanal' ? Math.ceil(totalDias / 7) : totalDias;
+    return { completados, meta, dias: totalDias };
+  }
+
   private parsearClave(clave: string, nombre: string): Date {
     const fecha = fechaDesdeClave(clave);
     if (Number.isNaN(fecha.getTime()) || claveDia(fecha) !== clave) {
@@ -269,12 +295,26 @@ export class StatisticsService {
 
     return datos.habitos.map((h) => {
       const dias = datos.porHabito.get(h.id) ?? new Set<string>();
-      const rachas = calcularRachas(dias, hoy);
+      const rachas =
+        h.frecuencia === 'semanal'
+          ? calcularRachasSemanales(dias, h.fechaInicio, hoy)
+          : calcularRachas(dias, hoy);
+      const inicio = claveDia(inicioDelDia(h.fechaInicio));
+      const fin = h.fechaFin ? claveDia(inicioDelDia(h.fechaFin)) : null;
+      const hasta = fin && fin < claveHoy ? fin : claveHoy;
+      const avance = this.resultadoPeriodo(h, dias, inicio, hasta);
       return {
         id: h.id,
         nombre: h.nombre,
         frecuencia: h.frecuencia,
         activo: h.activo,
+        finalizado: estadoHabito(h, hoy) === 'finalizado',
+        fechaInicio: inicio,
+        fechaFin: fin,
+        completadosPeriodo: avance.completados,
+        metaPeriodo: avance.meta,
+        diasTranscurridos: avance.dias,
+        diasTotales: fin ? this.contarDias(inicio, fin) : null,
         completadoHoy: dias.has(claveHoy),
         completadosSemana: contar(dias, 7),
         completadosMes: contar(dias, 30),
